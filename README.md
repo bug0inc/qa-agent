@@ -1,32 +1,28 @@
-<h1 align="center">
-    <a href="https://bug0.com/p/passmark"><img src="https://raw.githubusercontent.com/bug0inc/passmark/main/.github/assets/passmark-logo-banner.png" alt="Passmark" /></a>
-    <br>
-    <small>The open-source Playwright library for AI regression testing.</small>
-</h1>
+<h1 align="center">Bug0 AI<br><small>The open-source Playwright library for AI regression testing.</small></h1>
 
 <p align="center">
     <a href="https://x.com/bug0inc"><img src="https://img.shields.io/badge/follow-%40bug0inc-black?logo=x" alt="Follow on X"></a>
     <a href="https://www.linkedin.com/company/bug0"><img src="https://img.shields.io/badge/LinkedIn-bug0-blue?logo=linkedin" alt="LinkedIn"></a>
     <a href="https://bug0.com"><img src="https://img.shields.io/badge/website-bug0.com-brightgreen" alt="Website"></a>
-    <a href="https://www.npmjs.com/package/passmark"><img src="https://img.shields.io/npm/v/passmark" alt="npm package version"></a>
-    <a href="https://github.com/bug0inc/passmark/blob/main/LICENSE.md"><img src="https://img.shields.io/badge/license-FSL--1.1--ALv2-blue" alt="License"></a>
+    <a href="https://www.npmjs.com/package/@bug0/ai"><img src="https://img.shields.io/npm/v/%40bug0%2Fai" alt="npm package version"></a>
+    <a href="./LICENSE.md"><img src="https://img.shields.io/badge/license-FSL--1.1--ALv2-blue" alt="License"></a>
 </p>
 
-Passmark covers your browser regression testing end-to-end and **helps you catch regressions early. Fast.**
+Bug0 AI covers your browser regression testing end-to-end and **helps you catch regressions early. Fast.**
 
 It uses AI models to execute natural language browser steps via Playwright, with intelligent caching, auto-healing, and multi-model assertion verification. Your tests stay stable without needing to update AI prompts or retrain models.
 
-Passmark is built by [Bug0](https://bug0.com), the team also building [FactoryKit](https://factorykit.ai), the AI software factory.
+Bug0 AI is built by [Bug0](https://bug0.com), the team also building [FactoryKit](https://factorykit.ai), the AI software factory.
 
 ## Quick Start
 
 ```bash
-npm init playwright@latest passmark-project # select the default options and set language to TypeScript
-cd passmark-project
-npm install passmark
+npm init playwright@latest bug0-ai-project # select the default options and set language to TypeScript
+cd bug0-ai-project
+npm install @bug0/ai
 ```
 
-We need at least one model from Anthropic and one from Google to use Passmark's multi-model consensus features. Set the required environment variables in `.env`:
+We need at least one model from Anthropic and one from Google to use Bug0 AI's multi-model consensus features. Set the required environment variables in `.env`:
 
 ```
 ANTHROPIC_API_KEY=sk-ant-...
@@ -52,7 +48,7 @@ Now, paste the following code into `tests/example.spec.ts`:
 
 ```typescript
 import { test, expect } from "@playwright/test";
-import { runSteps } from "passmark";
+import { runSteps } from "@bug0/ai";
 
 test.use({
   headless: !!process.env.CI,
@@ -80,7 +76,7 @@ test("Shopping cart tests", async ({ page }) => {
 If you are using an AI gateway, you can add the following to the above code:
 
 ```typescript
-import { runSteps, configure } from "passmark";
+import { runSteps, configure } from "@bug0/ai";
 
 configure({
   ai: {
@@ -100,14 +96,14 @@ To run the test, use:
 npx playwright test example.spec.ts --project chromium
 ```
 
-After the test completes, you can run `npx playwright show-report` to see a detailed report of the test execution, including an AI summary at the top, provided by Passmark.
+After the test completes, you can run `npx playwright show-report` to see a detailed report of the test execution, including an AI summary at the top, provided by Bug0 AI.
 
 ### Using CUA mode (OpenAI computer-use agent)
 
-By default Passmark uses ARIA accessibility snapshots. For visual, screenshot-driven automation via OpenAI's computer-use agent, opt in with `mode: "cua"`:
+By default Bug0 AI uses ARIA accessibility snapshots. For visual, screenshot-driven automation via OpenAI's computer-use agent, opt in with `mode: "cua"`:
 
 ```typescript
-import { configure } from "passmark";
+import { configure } from "@bug0/ai";
 
 configure({
   ai: {
@@ -185,7 +181,7 @@ Set `OPENAI_API_KEY` whenever any step opts into `mode: "cua"`. CUA steps still 
 
 ## Testing agent-written code
 
-Regression risk scales with change volume, and coding agents have multiplied change volume. When a background coding agent like [FactoryKit](https://factorykit.ai) works your backlog, it runs your repo's own checks on every change before a human reviews the pull request; a Passmark suite slots in as exactly that check. Because steps are written in natural language and auto-heal, the suite keeps passing while the agent reshapes the DOM underneath it, which is where selector-based tests usually give up.
+Regression risk scales with change volume, and coding agents have multiplied change volume. When a background coding agent like [FactoryKit](https://factorykit.ai) works your backlog, it runs your repo's own checks on every change before a human reviews the pull request; a Bug0 AI suite slots in as exactly that check. Because steps are written in natural language and auto-heal, the suite keeps passing while the agent reshapes the DOM underneath it, which is where selector-based tests usually give up.
 
 ## Core Functions
 
@@ -235,7 +231,7 @@ const result = await assert({
 
 ### Consensus Policy
 
-When the primary (Claude) and secondary (Gemini) assertion models reach the same verdict, the result is used directly. When they **disagree**, you choose how Passmark resolves it:
+When the primary (Claude) and secondary (Gemini) assertion models reach the same verdict, the result is used directly. When they **disagree**, you choose how Bug0 AI resolves it:
 
 | Policy | Behavior |
 |---|---|
@@ -254,7 +250,7 @@ configure({
 
 ### Video Assertions
 
-For UI that's only visible for a second or two — toast messages, snackbar confirmations, transient banners — a single end-of-flow screenshot often misses the evidence. Set `video: true` on an assertion inside `runSteps` and Passmark will record the entire step run with `page.screencast`, upload the resulting `.webm` to Gemini's Files API, and evaluate the assertion against the full video:
+For UI that's only visible for a second or two — toast messages, snackbar confirmations, transient banners — a single end-of-flow screenshot often misses the evidence. Set `video: true` on an assertion inside `runSteps` and Bug0 AI will record the entire step run with `page.screencast`, upload the resulting `.webm` to Gemini's Files API, and evaluate the assertion against the full video:
 
 ```typescript
 await runSteps({
@@ -275,7 +271,7 @@ await runSteps({
 Notes:
 
 - Recording spans the **entire** step run (start of first step to end of last step). One recording is shared across all `video: true` assertions in the same `runSteps` call.
-- The video file is written to `/tmp/passmark-recordings/` by default and deleted automatically after the assertions consume it. Override via `configure({ videoDir: "/your/path" })`.
+- The video file is written to `/tmp/bug0-ai-recordings/` by default and deleted automatically after the assertions consume it. Override via `configure({ videoDir: "/your/path" })`.
 - This path uses **only Gemini** (no Claude/Gemini consensus) since Claude doesn't accept video. The model is `gemini-3-flash-preview`.
 - Video assertions go **directly** to Gemini's Files API regardless of any configured `gateway` — file URIs are tied to the uploading Google account, so the gateway can't proxy them. You must set `GOOGLE_GENERATIVE_AI_API_KEY` (or `GEMINI_API_KEY`) even when the rest of your stack runs through Vercel / OpenRouter / Cloudflare.
 - If `page.screencast.start()` fails (rare), video assertions silently fall back to the regular screenshot/snapshot path so the run still completes.
@@ -285,7 +281,7 @@ Notes:
 Call `configure()` once before using any functions:
 
 ```typescript
-import { configure } from "passmark";
+import { configure } from "@bug0/ai";
 
 configure({
   ai: {
@@ -315,7 +311,7 @@ configure({
 | `CLOUDFLARE_AI_GATEWAY_API_KEY` | If gateway=cloudflare and the gateway is authenticated | - | Cloudflare AI Gateway token (sent as `cf-aig-authorization`) |
 | `AXIOM_TOKEN` | No | - | Axiom token for OpenTelemetry tracing. Can also be set via `configure({ telemetry: { axiomToken } })`, which takes precedence. |
 | `AXIOM_DATASET` | No | - | Axiom dataset for trace storage. Can also be set via `configure({ telemetry: { axiomDataset } })`, which takes precedence. |
-| `PASSMARK_LOG_LEVEL` | No | `info` | Log level: `debug`, `info`, `warn`, `error`, `silent` |
+| `BUG0_AI_LOG_LEVEL` | No | `info` | Log level: `debug`, `info`, `warn`, `error`, `silent` |
 
 ## Model Configuration
 
@@ -334,7 +330,7 @@ All models are configurable via `configure({ ai: { models: { ... } } })`:
 
 ## Caching
 
-Passmark caches successful step actions in Redis. On subsequent runs, cached steps execute directly without AI calls, dramatically reducing latency and cost.
+Bug0 AI caches successful step actions in Redis. On subsequent runs, cached steps execute directly without AI calls, dramatically reducing latency and cost.
 
 Provide the connection via `configure({ redis: { url } })` or the `REDIS_URL` env var (configure value wins). Without either, caching, `{{global.*}}` placeholders, and project data are disabled.
 
@@ -351,7 +347,7 @@ Telemetry is opt-in. Either set the `AXIOM_TOKEN` and `AXIOM_DATASET` env vars, 
 configure({
   telemetry: {
     axiomToken: process.env.MY_AXIOM_TOKEN,
-    axiomDataset: "passmark-traces",
+    axiomDataset: "bug0-ai-traces",
   },
 });
 ```
@@ -367,8 +363,8 @@ Configure Axiom to get a rich dashboard like this:
 Configure an email provider for testing flows that involve email verification. By default, you can use the `emailsink` provider, which provides disposable email addresses and an API to fetch received emails. The free tier doesn't need any credentials, but for more reliability and flexible rate limits, you can sign up for an account and use your `EMAILSINK_API_KEY`. Reach out to us if you want to get an API key.
 
 ```typescript
-import { configure } from "passmark";
-import { emailsinkProvider } from "passmark/providers/emailsink";
+import { configure } from "@bug0/ai";
+import { emailsinkProvider } from "@bug0/ai/providers/emailsink";
 
 configure({
   email: emailsinkProvider({ apiKey: process.env.EMAILSINK_API_KEY }),
