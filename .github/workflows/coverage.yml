@@ -1,0 +1,71 @@
+name: Code Coverage
+
+on:
+    pull_request:
+        branches:
+            - main
+    push:
+        branches:
+            - main
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    coverage:
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                node-version: [ 20.x ]
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Set up Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ matrix.node-version }}
+
+            - name: Install pnpm
+              uses: pnpm/action-setup@v2
+              with:
+                  version: 8
+
+            - name: Get pnpm store directory
+              id: pnpm-cache
+              shell: bash
+              run: |
+                  echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+            - name: Setup pnpm cache
+              uses: actions/cache@v3
+              with:
+                  path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+                  key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+                  restore-keys: |
+                      ${{ runner.os }}-pnpm-store-
+
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
+
+            - name: Run tests with coverage
+              run: pnpm test:coverage
+
+            - name: Upload coverage to Codecov
+              uses: codecov/codecov-action@v3
+              with:
+                  files: ./coverage/coverage-final.json
+                  flags: unittests
+                  name: codecov-umbrella
+                  fail_ci_if_error: false
+                  verbose: true
+
+            - name: Comment coverage on PR
+              if: github.event_name == 'pull_request'
+              uses: romeovs/lcov-reporter-action@v0.3.1
+              with:
+                  lcov-file: ./coverage/lcov.info
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
+              continue-on-error: true
