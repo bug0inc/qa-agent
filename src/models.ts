@@ -19,12 +19,13 @@ let _openrouter: ReturnType<typeof createOpenRouter> | null = null;
 let _opencodezen: ReturnType<typeof createOpenAI> | null = null;
 let _cloudflareGoogle: ReturnType<typeof createGoogleGenerativeAI> | null = null;
 let _cloudflareAnthropic: ReturnType<typeof createAnthropic> | null = null;
+let _litellm: ReturnType<typeof createOpenAI> | null = null;
 
 function getGoogleProvider() {
   if (!_google) {
     if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
       throw new ConfigurationError(
-        "GOOGLE_GENERATIVE_AI_API_KEY isn't set. Add it to your environment (for example: export GOOGLE_GENERATIVE_AI_API_KEY=your_key), or use a gateway: configure({ ai: { gateway: 'vercel' } }) with AI_GATEWAY_API_KEY, configure({ ai: { gateway: 'openrouter' } }) with OPENROUTER_API_KEY, or configure({ ai: { gateway: 'cloudflare' } }) with CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_AI_GATEWAY, GOOGLE_GENERATIVE_AI_API_KEY, and CLOUDFLARE_AI_GATEWAY_API_KEY. See .env.example for reference.",
+        "GOOGLE_GENERATIVE_AI_API_KEY isn't set. Add it to your environment (for example: export GOOGLE_GENERATIVE_AI_API_KEY=your_key), or use a gateway: configure({ ai: { gateway: 'vercel' } }) with AI_GATEWAY_API_KEY, configure({ ai: { gateway: 'openrouter' } }) with OPENROUTER_API_KEY, configure({ ai: { gateway: 'litellm' } }) with LITELLM_BASE_URL, or configure({ ai: { gateway: 'cloudflare' } }) with CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_AI_GATEWAY, GOOGLE_GENERATIVE_AI_API_KEY, and CLOUDFLARE_AI_GATEWAY_API_KEY. See .env.example for reference.",
       );
     }
     _google = createGoogleGenerativeAI({
@@ -38,7 +39,7 @@ function getAnthropicProvider() {
   if (!_anthropic) {
     if (!process.env.ANTHROPIC_API_KEY) {
       throw new ConfigurationError(
-        "ANTHROPIC_API_KEY isn't set. Add it to your environment (for example: export ANTHROPIC_API_KEY=your_key), or use a gateway: configure({ ai: { gateway: 'vercel' } }) with AI_GATEWAY_API_KEY, configure({ ai: { gateway: 'openrouter' } }) with OPENROUTER_API_KEY, or configure({ ai: { gateway: 'cloudflare' } }) with CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_AI_GATEWAY, ANTHROPIC_API_KEY, and CLOUDFLARE_AI_GATEWAY_API_KEY. See .env.example for reference.",
+        "ANTHROPIC_API_KEY isn't set. Add it to your environment (for example: export ANTHROPIC_API_KEY=your_key), or use a gateway: configure({ ai: { gateway: 'vercel' } }) with AI_GATEWAY_API_KEY, configure({ ai: { gateway: 'openrouter' } }) with OPENROUTER_API_KEY, configure({ ai: { gateway: 'litellm' } }) with LITELLM_BASE_URL, or configure({ ai: { gateway: 'cloudflare' } }) with CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_AI_GATEWAY, ANTHROPIC_API_KEY, and CLOUDFLARE_AI_GATEWAY_API_KEY. See .env.example for reference.",
       );
     }
     _anthropic = createAnthropic({
@@ -76,19 +77,19 @@ function getOpenRouterProvider() {
   return _openrouter;
 }
 
-function getOpenCodeZenProvider() {
-  if (!_opencodezen) {
-    if (!process.env.OPENCODEZEN_API_KEY) {
+function getLiteLLMProvider() {
+  if (!_litellm) {
+    if (!process.env.LITELLM_BASE_URL) {
       throw new ConfigurationError(
-        "OPENCODEZEN_API_KEY isn't set. Add it to your environment (for example: export OPENCODEZEN_API_KEY=your_key). See .env.example for reference.",
+        "LITELLM_BASE_URL isn't set. To use the LiteLLM gateway, add LITELLM_BASE_URL to your environment (e.g. export LITELLM_BASE_URL=http://localhost:4000/v1). You may also need to set LITELLM_API_KEY.",
       );
     }
-    _opencodezen = createOpenAI({
-      baseURL: "https://opencode.ai/zen/v1",
-      apiKey: process.env.OPENCODEZEN_API_KEY,
+    _litellm = createOpenAI({
+      apiKey: process.env.LITELLM_API_KEY || "dummy-key",
+      baseURL: process.env.LITELLM_BASE_URL,
     });
   }
-  return _opencodezen;
+  return _litellm;
 }
 
 /**
@@ -180,6 +181,13 @@ function resolveOpenRouterModelId(modelId: string): string {
   return OPENROUTER_MODEL_ALIASES[modelId] ?? modelId;
 }
 
+function resolveLiteLLMModelId(modelId: string): string {
+  if (modelId.startsWith("google/")) {
+    return modelId.replace("google/", "gemini/");
+  }
+  return modelId;
+}
+
 /**
  * Maps canonical model IDs (provider/model) to OpenCode Zen model IDs.
  * Zen strips the provider prefix and uses its own naming for some models.
@@ -240,8 +248,8 @@ export function resolveModel(modelId: string, gatewayOverride?: AIGateway): Lang
     return wrapModel(getOpenRouterProvider()(resolveOpenRouterModelId(modelId)));
   }
 
-  if (gatewayConfig === "opencodezen") {
-    return wrapModel(getOpenCodeZenProvider()(resolveOpenCodeZenModelId(modelId)));
+  if (gatewayConfig === "litellm") {
+    return wrapModel(getLiteLLMProvider()(resolveLiteLLMModelId(modelId)));
   }
 
   const [provider, ...rest] = modelId.split("/");

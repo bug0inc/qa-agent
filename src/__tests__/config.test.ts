@@ -29,9 +29,9 @@ describe("config", () => {
     expect(getConfig().ai?.gateway).toBe("openrouter");
   });
 
-  it("configure sets ai.gateway to opencodezen", () => {
-    configure({ ai: { gateway: "opencodezen" } });
-    expect(getConfig().ai?.gateway).toBe("opencodezen");
+  it("configure sets ai.gateway to litellm", () => {
+    configure({ ai: { gateway: "litellm" } });
+    expect(getConfig().ai?.gateway).toBe("litellm");
   });
 
   it("configure merges without overwriting other keys", () => {

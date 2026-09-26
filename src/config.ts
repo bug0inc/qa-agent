@@ -11,7 +11,7 @@ export type EmailProvider = {
   extractContent: (params: { email: string; prompt: string }) => Promise<string>;
 };
 
-export type AIGateway = "vercel" | "openrouter" | "opencodezen" | "cloudflare" | "none";
+export type AIGateway = "vercel" | "openrouter" | "cloudflare" | "litellm" | "none";
 
 /**
  * Execution mode for browser automation.
