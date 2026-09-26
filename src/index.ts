@@ -526,6 +526,14 @@ export const runSteps = async ({
           }),
       );
 
+      // Log token usage for the step
+      logger.info(
+        `[token usage] step: "${step.description}" | ` +
+        `prompt: ${result.usage.inputTokens} | ` +
+        `completion: ${result.usage.outputTokens} | ` +
+        `total: ${result.usage.totalTokens}`
+      );
+
       // Cache the step action only if it was a single tool call (simple, deterministic action).
       // Multi-step actions are not cached as they may be non-deterministic.
       const allToolCalls = result.steps
@@ -753,7 +761,7 @@ export const runUserFlow = async ({
       ? resolveModel(effectiveAi.getModelId("userFlowLow"), effectiveAi.gateway)
       : resolveModel(effectiveAi.getModelId("userFlowHigh"), effectiveAi.gateway);
 
-  const { tools } = getAItools(page, {
+  const { tools, resetLastSnapshot } = getAItools(page, {
     abortController,
   });
 
@@ -783,6 +791,7 @@ export const runUserFlow = async ({
           prepareStep: async ({ messages }) => {
             // Remove older messages to keep the context window small
             if (messages.length > 11) {
+              resetLastSnapshot();
               const modifiedMessages = [messages[0], ...messages.slice(-10)];
               return {
                 messages: modifiedMessages,

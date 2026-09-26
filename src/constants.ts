@@ -25,6 +25,9 @@ export const THINKING_BUDGET_DEFAULT = 1024;
 // Redis
 export const GLOBAL_VALUES_TTL_SECONDS = 86400;
 
+// Delta snapshot
+export const DELTA_SNAPSHOT_MIN_SAVINGS_RATIO = 0.2;
+
 // Video assertions
 export const VIDEO_DEFAULT_DIR = "/tmp/passmark-recordings";
 export const VIDEO_DEFAULT_WIDTH = 1280;

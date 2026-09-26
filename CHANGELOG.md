@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Delta snapshot optimization**: Post-action ARIA snapshots within a step now return only the lines that changed since the last snapshot, instead of the full page tree. This cuts token usage by ~92% on complex pages (large tables, dashboards, CRM grids) — from ~1M tokens to ~82k for a 10-action step. The first snapshot of each step is always full. A built-in savings-ratio threshold (20%) ensures delta mode never sends more tokens than a full snapshot would. Enable/disable globally: `configure({ deltaSnapshot: false })`. Default: `true`.
 - **OpenCode Zen gateway support**: set `gateway: "opencodezen"` in `configure()` and provide `OPENCODEZEN_API_KEY` to route all model requests through [OpenCode Zen](https://opencode.ai/docs/ko/zen/) (`https://opencode.ai/zen/v1`), an OpenAI-compatible gateway with 30+ curated models including Claude, Gemini, GPT, Qwen, and more.
 - **OpenAI Support**: Direct integration with OpenAI models via `@ai-sdk/openai` and `OPENAI_API_KEY`
 - `maxRetries` option to `AssertionOptions` (default: `1`) to control how many times a failed assertion is retried with a fresh page snapshot and screenshot. Setting it to `0` disables retries.

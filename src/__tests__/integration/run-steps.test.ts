@@ -21,7 +21,7 @@ vi.mock("ai", async (importOriginal) => {
   const actual = await importOriginal<typeof import("ai")>();
   return {
     ...actual,
-    generateText: vi.fn().mockResolvedValue({ text: "done", steps: [], output: {} }),
+    generateText: vi.fn().mockResolvedValue({ text: "done", steps: [], output: {}, usage: { inputTokens: 100, outputTokens: 50, totalTokens: 150 } }),
     streamText: vi.fn(),
   };
 });
@@ -275,7 +275,7 @@ describe("runSteps", () => {
     vi.mocked(generateText).mockImplementation(async (_opts: unknown) => {
       // Extract the step description from the prompt to track order
       callOrder.push(`generateText-call-${callOrder.length + 1}`);
-      return { text: "done", steps: [] } as unknown as Awaited<ReturnType<typeof generateText>>;
+      return { text: "done", steps: [], usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 } } as unknown as Awaited<ReturnType<typeof generateText>>;
     });
 
     const steps: Step[] = [

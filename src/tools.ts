@@ -7,6 +7,7 @@ import { getConfig } from "./config";
 import { isAxiomEnabled } from "./instrumentation";
 import { logger } from "./logger";
 import { LOCATOR_ACTION_TIMEOUT, SNAPSHOT_TIMEOUT, STOP_DELAY } from "./constants";
+import { computeSnapshotDiff } from "./utils/snapshot-diff";
 import {
   PlaywrightTestArgs,
   PlaywrightTestOptions,
@@ -58,7 +59,7 @@ export function getAItools(page: Page, settings?: ToolSettings) {
       const snapshot = await playwrightTools.getSnapshot();
       return { ...result, snapshot };
     } catch (_error) {
-      return `Error executing this action. Retry the action or try a different one.\n\nLatest Snapshot:\n\n${await playwrightTools.getSnapshot()}`;
+      return `Error executing this action. Retry the action or try a different one.\n\nLatest Snapshot:\n\n${await playwrightTools.getSnapshot({ forceFull: true })}`;
     }
   };
 
@@ -151,7 +152,7 @@ export function getAItools(page: Page, settings?: ToolSettings) {
           reasoning: z.string().describe("A quick one-line reasoning behind this action"),
         }),
         execute: async (_args) => {
-          return await playwrightTools.getSnapshot();
+          return await playwrightTools.getSnapshot({ forceFull: true });
         },
       }),
     ),
@@ -258,6 +259,7 @@ export function getAItools(page: Page, settings?: ToolSettings) {
     clearPendingCacheData: () => {
       playwrightTools.pendingCacheData = null;
     },
+    resetLastSnapshot: () => playwrightTools.resetLastSnapshot(),
   };
 }
 
@@ -266,6 +268,7 @@ class PlaywrightTools {
   private tabManager?: TabManager;
   private currentStep;
   private abortController?: AbortController;
+  private lastSnapshot: string | null = null;
   public pendingCacheData: Record<string, string> | null = null;
 
   private get page(): Page {
@@ -281,9 +284,31 @@ class PlaywrightTools {
     this.abortController = abortController;
   }
 
-  public async getSnapshot() {
-    const snapshot = await this.page.ariaSnapshot({ mode: "ai", timeout: SNAPSHOT_TIMEOUT });
-    return `url: ${this.page.url()}\n\n${snapshot}`;
+  public async getSnapshot({ forceFull = false }: { forceFull?: boolean } = {}) {
+    const raw = await this.page.ariaSnapshot({ mode: "ai", timeout: SNAPSHOT_TIMEOUT });
+    const full = `url: ${this.page.url()}\n\n${raw}`;
+
+    if (this.lastSnapshot === null || forceFull) {
+      this.lastSnapshot = full;
+      return full;
+    }
+
+    const { diff, isFull, savedChars } = computeSnapshotDiff(this.lastSnapshot, full);
+    this.lastSnapshot = full;
+
+    if (isFull) {
+      logger.debug("Delta snapshot: change ratio too high, returning full snapshot");
+      return full;
+    }
+
+    logger.debug(
+      `Delta snapshot: -${savedChars.toLocaleString()} chars saved on step "${this.currentStep?.description}"`,
+    );
+    return diff;
+  }
+
+  public resetLastSnapshot() {
+    this.lastSnapshot = null;
   }
 
   public navigateSchema = z.object({
@@ -297,6 +322,7 @@ class PlaywrightTools {
   });
   public async navigate({ url }: z.infer<typeof this.navigateSchema>) {
     await this.page.goto(url, { waitUntil: "load" });
+    this.lastSnapshot = null;
     return { success: true, url };
   }
 
@@ -398,16 +424,19 @@ class PlaywrightTools {
 
   public async goBack() {
     await this.page.goBack();
+    this.lastSnapshot = null;
     return { success: true };
   }
 
   public async goForward() {
     await this.page.goForward();
+    this.lastSnapshot = null;
     return { success: true };
   }
 
   public async reload() {
     await this.page.reload({ waitUntil: "load" });
+    this.lastSnapshot = null;
     return { success: true };
   }
 
