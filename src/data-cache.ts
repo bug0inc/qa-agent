@@ -4,7 +4,7 @@ import { getConfig } from "./config";
 import { extractEmailContent } from "./email";
 import { GLOBAL_VALUES_TTL_SECONDS } from "./constants";
 import { logger } from "./logger";
-import { getRedis } from "./redis";
+import { redisHGetAll, redisHSet, redisExpire } from "./redis";
 import { Step } from "./types";
 import { generatePhoneNumber } from "./utils";
 
@@ -125,10 +125,8 @@ function getRedisKey(executionId: string): string {
 export async function getGlobalValues(
   executionId: string,
 ): Promise<Partial<GlobalPlaceholders> | null> {
-  const redis = getRedis();
-  if (!redis) return null;
   const key = getRedisKey(executionId);
-  const values = await redis.hgetall(key);
+  const values = await redisHGetAll(key);
 
   if (!values || Object.keys(values).length === 0) {
     return null;
@@ -145,16 +143,14 @@ export async function saveGlobalValues(
   executionId: string,
   values: GlobalPlaceholders,
 ): Promise<void> {
-  const redis = getRedis();
-  if (!redis) return;
-
   const key = getRedisKey(executionId);
 
-  // Save all values as a hash
-  await redis.hset(key, values);
+  // Save all values as a hash (safe helper: no TOCTOU / never throws)
+  const saved = await redisHSet(key, values);
+  if (!saved) return;
 
   // Set TTL
-  await redis.expire(key, GLOBAL_VALUES_TTL_SECONDS);
+  await redisExpire(key, GLOBAL_VALUES_TTL_SECONDS);
 
   logger.debug(`Saved global values to Redis for execution: ${executionId}`);
 }
@@ -175,10 +171,8 @@ function getProjectDataRedisKey(projectId: string): string {
  * Returns an empty object if no data exists.
  */
 export async function getProjectData(projectId: string): Promise<ProjectDataPlaceholders> {
-  const redis = getRedis();
-  if (!redis) return {};
   const key = getProjectDataRedisKey(projectId);
-  const values = await redis.hgetall(key);
+  const values = await redisHGetAll(key);
 
   if (!values || Object.keys(values).length === 0) {
     return {};

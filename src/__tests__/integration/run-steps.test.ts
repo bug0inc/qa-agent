@@ -6,7 +6,8 @@ vi.mock("../../instrumentation", () => ({
   initTelemetry: vi.fn(),
 }));
 
-// Mock Redis
+// Mock Redis client + safe helpers (helpers must be mocked: they close over getRedis
+// inside the redis module, so overriding only the getRedis export is not enough).
 const mockRedis = {
   hgetall: vi.fn().mockResolvedValue({}),
   hset: vi.fn().mockResolvedValue("OK"),
@@ -14,6 +15,30 @@ const mockRedis = {
 };
 vi.mock("../../redis", () => ({
   getRedis: () => mockRedis,
+  resetRedis: vi.fn(),
+  redisHGetAll: async (key: string) => {
+    try {
+      return (await mockRedis.hgetall(key)) ?? {};
+    } catch {
+      return {};
+    }
+  },
+  redisHSet: async (key: string, data: Record<string, string>) => {
+    try {
+      await mockRedis.hset(key, data);
+      return true;
+    } catch {
+      return false;
+    }
+  },
+  redisExpire: async (key: string, seconds: number) => {
+    try {
+      await mockRedis.expire(key, seconds);
+      return true;
+    } catch {
+      return false;
+    }
+  },
 }));
 
 // Mock AI SDK

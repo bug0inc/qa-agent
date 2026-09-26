@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Redis TOCTOU safety** (#71): step cache and placeholder Redis ops use call-time client resolution with try/catch helpers (`redisHGetAll` / `redisHSet` / `redisExpire`), so a disconnect or `resetRedis()` between null-check and use no longer crashes step execution. `resetRedis()` now clears the module reference before disconnecting.
+
 ### Added
 
 - **OpenCode Zen gateway support**: set `gateway: "opencodezen"` in `configure()` and provide `OPENCODEZEN_API_KEY` to route all model requests through [OpenCode Zen](https://opencode.ai/docs/ko/zen/) (`https://opencode.ai/zen/v1`), an OpenAI-compatible gateway with 30+ curated models including Claude, Gemini, GPT, Qwen, and more.

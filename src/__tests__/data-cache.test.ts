@@ -1,7 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("../redis", () => ({
-  getRedis: () => ({ hgetall: vi.fn(), hset: vi.fn(), expire: vi.fn() }),
+  getRedis: () => ({
+    hgetall: vi.fn().mockResolvedValue({}),
+    hset: vi.fn().mockResolvedValue("OK"),
+    expire: vi.fn().mockResolvedValue(1),
+  }),
+  resetRedis: vi.fn(),
+  redisHGetAll: vi.fn().mockResolvedValue({}),
+  redisHSet: vi.fn().mockResolvedValue(true),
+  redisExpire: vi.fn().mockResolvedValue(true),
 }));
 
 vi.mock("../email", () => ({

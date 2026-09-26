@@ -21,7 +21,7 @@ async function maybeWithSpan<T>(
 }
 import { z } from "zod";
 import { buildRunStepsPrompt, buildRunUserFlowPrompt } from "./prompts";
-import { getRedis } from "./redis";
+import { getRedis, redisHGetAll, redisHSet } from "./redis";
 import { getAItools } from "./tools";
 import { RunStepsOptions, UserFlowOptions } from "./types";
 import {
@@ -352,8 +352,8 @@ export const runSteps = async ({
       continue;
     }
 
-    // First check if the step is cached on redis
-    const cachedStep = redis ? await redis.hgetall(`step:${userFlow}:${step.description}`) : {};
+    // First check if the step is cached on redis (safe helper: no TOCTOU / never throws)
+    const cachedStep = await redisHGetAll(`step:${userFlow}:${step.description}`);
 
     if (
       !bypassCache &&
@@ -532,11 +532,13 @@ export const runSteps = async ({
         .flatMap((s) => s.toolCalls)
         .filter((tool) => ["browser_snapshot", "browser_stop"].indexOf(tool.toolName) === -1);
 
-      if (allToolCalls.length === 1 && redis) {
+      if (allToolCalls.length === 1) {
         const cacheData = getPendingCacheData();
         if (cacheData) {
-          await redis.hset(`step:${userFlow}:${step.description}`, cacheData);
-          logger.debug(`Cached step action: ${step.description}`);
+          const cached = await redisHSet(`step:${userFlow}:${step.description}`, cacheData);
+          if (cached) {
+            logger.debug(`Cached step action: ${step.description}`);
+          }
         }
       }
 
