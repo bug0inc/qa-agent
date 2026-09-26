@@ -71,13 +71,17 @@ function makeGenerateTextImpl(opts: {
       return { output: opts.claude } as any;
     }
     if (model.includes("gemini-3-flash")) {
-      const g = typeof opts.gemini === "function" ? (opts.gemini as () => AssertionObj)() : opts.gemini;
+      const g =
+        typeof opts.gemini === "function" ? (opts.gemini as () => AssertionObj)() : opts.gemini;
       return { output: g } as any;
     }
     if (model.includes("3.1-pro-preview")) {
       return {
-        output:
-          opts.arbiter ?? { assertionPassed: false, confidenceScore: 0, reasoning: "no arbiter set" },
+        output: opts.arbiter ?? {
+          assertionPassed: false,
+          confidenceScore: 0,
+          reasoning: "no arbiter set",
+        },
       } as any;
     }
     return { output: { assertionPassed: false, confidenceScore: 0, reasoning: "unknown" } } as any;
@@ -142,7 +146,11 @@ describe("assert consensus logic", () => {
       makeGenerateTextImpl({
         claude: { assertionPassed: true, confidenceScore: 95, reasoning: "Claude: yes" },
         gemini: { assertionPassed: false, confidenceScore: 30, reasoning: "Gemini: no" },
-        arbiter: { assertionPassed: true, confidenceScore: 70, reasoning: "Arbiter: I side with Claude" },
+        arbiter: {
+          assertionPassed: true,
+          confidenceScore: 70,
+          reasoning: "Arbiter: I side with Claude",
+        },
       }) as any,
     );
 
@@ -165,7 +173,11 @@ describe("assert consensus logic", () => {
       makeGenerateTextImpl({
         claude: { assertionPassed: true, confidenceScore: 60, reasoning: "Claude: yes" },
         gemini: { assertionPassed: false, confidenceScore: 40, reasoning: "Gemini: no" },
-        arbiter: { assertionPassed: false, confidenceScore: 45, reasoning: "Arbiter: I disagree, it fails" },
+        arbiter: {
+          assertionPassed: false,
+          confidenceScore: 45,
+          reasoning: "Arbiter: I disagree, it fails",
+        },
       }) as any,
     );
 
@@ -193,7 +205,11 @@ describe("assert consensus logic", () => {
           if (geminiCalls === 1) {
             throw new Error("transient model error");
           }
-          return { assertionPassed: true, confidenceScore: 80, reasoning: "Gemini: ok after retry" };
+          return {
+            assertionPassed: true,
+            confidenceScore: 80,
+            reasoning: "Gemini: ok after retry",
+          };
         },
       }) as any,
     );
@@ -215,7 +231,9 @@ describe("assert consensus logic", () => {
     const page = createMockPage();
 
     // Make withTimeout reject once to simulate timeout
-    vi.mocked(withTimeout).mockImplementationOnce(() => Promise.reject(new Error("timed out")) as any);
+    vi.mocked(withTimeout).mockImplementationOnce(
+      () => Promise.reject(new Error("timed out")) as any,
+    );
 
     vi.mocked(generateText).mockImplementation(
       makeGenerateTextImpl({

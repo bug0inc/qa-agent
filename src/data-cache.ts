@@ -418,7 +418,7 @@ export async function processPlaceholders(
   if (hasGlobalPlaceholders && !executionId) {
     throw new ValidationError(
       "{{global.*}} placeholders require an executionId. " +
-      "Please provide executionId in runSteps options to use global placeholders.",
+        "Please provide executionId in runSteps options to use global placeholders.",
     );
   }
 
@@ -438,7 +438,7 @@ export async function processPlaceholders(
   if (hasProjectDataPlaceholders && !projectId) {
     throw new ValidationError(
       "{{data.*}} placeholders require a projectId. " +
-      "Please provide projectId in runSteps options to use project data placeholders.",
+        "Please provide projectId in runSteps options to use project data placeholders.",
     );
   }
 

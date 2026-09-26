@@ -43,9 +43,7 @@ export const createTabManager = (initialPage: Page): TabManager => {
       else if (target === "latest") idx = pages.length - 1;
       else idx = target;
       if (idx < 0 || idx >= pages.length) {
-        throw new Error(
-          `switchToTab: invalid target ${target}; ${pages.length} tab(s) open.`,
-        );
+        throw new Error(`switchToTab: invalid target ${target}; ${pages.length} tab(s) open.`);
       }
       activeIndex = idx;
       return pages[idx];

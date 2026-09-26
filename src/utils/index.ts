@@ -12,11 +12,7 @@ import { z } from "zod";
 import { getModelId } from "../config";
 import { logger } from "../logger";
 import { resolveModel } from "../models";
-import {
-  PageInput,
-  WaitConditionResult,
-  WaitForConditionOptions,
-} from "../types";
+import { PageInput, WaitConditionResult, WaitForConditionOptions } from "../types";
 import type { TabManager } from "./tab-manager";
 
 /**
@@ -66,7 +62,7 @@ export const withTimeout = <T>(
 export const safeSnapshot = async (input: PageInput, timeout = SNAPSHOT_TIMEOUT) => {
   const attempt = async () => {
     return await resolvePage(input).ariaSnapshot({ mode: "ai", timeout });
-  }
+  };
 
   try {
     const snapshot = await attempt();
@@ -191,7 +187,9 @@ export async function waitForDOMStabilization(
         (error instanceof Error && error.message?.includes("navigation"))
       ) {
         // Navigation occurred - wait for the page to be ready
-        await resolvePage(input).waitForLoadState("domcontentloaded").catch(() => { });
+        await resolvePage(input)
+          .waitForLoadState("domcontentloaded")
+          .catch(() => {});
         return;
       }
       // Re-throw other errors
@@ -263,9 +261,9 @@ export async function waitForCondition({
   let currentInterval = initialInterval;
 
   const checkCondition = async (): Promise<WaitConditionResult> => {
-    const pageScreenshotAfterApplyingAction = (await resolvePage(page).screenshot({ fullPage: false })).toString(
-      "base64",
-    );
+    const pageScreenshotAfterApplyingAction = (
+      await resolvePage(page).screenshot({ fullPage: false })
+    ).toString("base64");
 
     const prompt = `
 You are an AI-powered QA Agent designed to test web applications.
@@ -273,15 +271,16 @@ You are an AI-powered QA Agent designed to test web applications.
 You are helping to determine if a wait condition has been met during a test flow.
 
 <Context>
-${previousSteps.length > 0
-        ? `Previous steps completed:\n${previousSteps
-          .map(
-            (s, i) =>
-              `${i + 1}. ${s.description}\n${s.data ? `   Data: ${JSON.stringify(s.data)}` : ""}`,
-          )
-          .join("\n")}`
-        : "No previous steps."
-      }
+${
+  previousSteps.length > 0
+    ? `Previous steps completed:\n${previousSteps
+        .map(
+          (s, i) =>
+            `${i + 1}. ${s.description}\n${s.data ? `   Data: ${JSON.stringify(s.data)}` : ""}`,
+        )
+        .join("\n")}`
+    : "No previous steps."
+}
 
 Last executed step: ${currentStep.description}
 ${nextStep ? `Next step: ${nextStep.description}` : ""}

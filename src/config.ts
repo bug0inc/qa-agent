@@ -149,7 +149,7 @@ export function configure(config: Config) {
   if (config.ai?.models?.cua !== undefined) {
     throw new Error(
       `[passmark] ai.models.cua is not user-configurable — CUA mode is locked to "${DEFAULT_MODELS.cua}". ` +
-      `Remove the "cua" field from configure({ ai: { models } }).`,
+        `Remove the "cua" field from configure({ ai: { models } }).`,
     );
   }
   globalConfig = { ...globalConfig, ...config };

@@ -7,9 +7,8 @@ function getEmailProvider() {
   const provider = getConfig().email;
   if (!provider) {
     throw new ConfigurationError(
-     "Email provider not configured. Call configure({ email: ... }) before using email features.",
+      "Email provider not configured. Call configure({ email: ... }) before using email features.",
     );
-   
   }
   return provider;
 }
@@ -95,6 +94,6 @@ export async function extractEmailContent({
   }
 
   throw new AIModelError(
-   `Failed to extract email content after ${maxRetries} attempts. Email: ${email}, Prompt: ${prompt}`,
+    `Failed to extract email content after ${maxRetries} attempts. Email: ${email}, Prompt: ${prompt}`,
   );
 }

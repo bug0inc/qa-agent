@@ -35,28 +35,31 @@ ${step.description}
 Current Step Index: ${stepIndex + 1} out of ${steps.length} steps.
 </StepIndex>
 
-${stepIndex + 1 < steps.length
-      ? `<NextStep>
+${
+  stepIndex + 1 < steps.length
+    ? `<NextStep>
 (For context only — DO NOT execute.) Next step: "${steps[stepIndex + 1].description}"
 </NextStep>`
-      : ""
-    }
+    : ""
+}
 
-${step.data
-      ? `<Data>
+${
+  step.data
+    ? `<Data>
 Use this data for the current step: ${JSON.stringify(step.data)}
 </Data>`
-      : ""
-    }
+    : ""
+}
 
-${auth
-      ? `<Auth>
+${
+  auth
+    ? `<Auth>
 If a login screen appears, use:
 - Email: ${auth.email}
 - Password: ${auth.password}${auth.callbackUrl ? `\n- Go to this callbackUrl post login: ${auth.callbackUrl}` : ""}
 </Auth>`
-      : ""
-    }
+    : ""
+}
 
 <Instructions>
 - Look at the current screenshot before acting. If the page is still loading, use the wait action.
@@ -85,17 +88,19 @@ You are an expert QA agent testing a web application using computer-use capabili
 ${userFlow}
 </UserFlow>
 
-${steps
-      ? `<Steps>
+${
+  steps
+    ? `<Steps>
 Follow these steps in order:
 ${steps}
 Stop once all steps are complete.
 </Steps>`
-      : ""
-    }
+    : ""
+}
 
-${assertion
-      ? `<Assertion>
+${
+  assertion
+    ? `<Assertion>
 ${assertion}
 </Assertion>
 
@@ -103,8 +108,8 @@ When the flow is complete, evaluate the assertion and report:
 - assertionPassed: boolean
 - confidenceScore: 0-100
 - reasoning: short explanation`
-      : ""
-    }
+    : ""
+}
 
 <Instructions>
 - Inspect each screenshot before acting.

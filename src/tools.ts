@@ -102,9 +102,7 @@ export function getAItools(page: Page, settings?: ToolSettings) {
           const base64 = (typeof result === "string" ? result : result.output) as string;
           return {
             type: "content",
-            value: [
-              { type: "media", data: base64, mediaType: "image/png" },
-            ],
+            value: [{ type: "media", data: base64, mediaType: "image/png" }],
           };
         },
       }),

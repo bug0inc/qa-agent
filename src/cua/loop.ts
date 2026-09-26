@@ -114,16 +114,16 @@ export async function runCUALoop({
     const e = err as OpenAIErrorLike;
     logger.error(
       `[cua] initial request failed: status=${e?.status ?? "?"} msg=${e?.message ?? err} ` +
-      `model=${model} tool=${JSON.stringify(tool)} ` +
-      `body=${JSON.stringify(e?.error ?? e?.response?.data ?? e?.body ?? {})}`,
+        `model=${model} tool=${JSON.stringify(tool)} ` +
+        `body=${JSON.stringify(e?.error ?? e?.response?.data ?? e?.body ?? {})}`,
     );
     // A generic 400 with no `param` usually means the account lacks access to
     // the CUA model or to the built-in `computer` tool on the Responses API.
     if (e?.status === 400) {
       logger.error(
         `[cua] if no "param" detail is shown above, verify your OpenAI API key has access to "${model}" ` +
-        `and the built-in "computer" tool on the Responses API ` +
-        `(https://platform.openai.com/settings/organization/limits).`,
+          `and the built-in "computer" tool on the Responses API ` +
+          `(https://platform.openai.com/settings/organization/limits).`,
       );
     }
     throw err;
@@ -248,7 +248,9 @@ function isAddressBarFocus(action: ComputerAction | undefined): boolean {
   if (!action || action.type !== "keypress") return false;
   const keys = ((action as { keys?: string[] }).keys ?? []).map((k) => k.toUpperCase());
   if (keys.length !== 2 || !keys.includes("L")) return false;
-  return keys.some((k) => k === "CTRL" || k === "CONTROL" || k === "META" || k === "CMD" || k === "COMMAND");
+  return keys.some(
+    (k) => k === "CTRL" || k === "CONTROL" || k === "META" || k === "CMD" || k === "COMMAND",
+  );
 }
 
 function isUrlType(action: ComputerAction | undefined): boolean {

@@ -131,7 +131,8 @@ export const runSteps = async ({
   const isPlaywrightRetry = test ? test.info().retry > 0 : false;
   if (isPlaywrightRetry) {
     logger.debug(
-      `Playwright retry detected (retry #${test!.info().retry
+      `Playwright retry detected (retry #${
+        test!.info().retry
       }). Bypassing cache and using AI only.`,
     );
   }
@@ -298,25 +299,21 @@ export const runSteps = async ({
       }
 
       try {
-        await maybeWithSpan(
-          { capability: "step_execution", step: "cua_loop" },
-          () =>
-            runCUALoop({
-              page: tabManager.active(),
-              instruction: buildRunStepsPromptCUA({
-                auth,
-                steps: processedSteps,
-                step,
-                userFlow,
-                stepIndex: i,
-              }),
-              maxSteps: STEP_EXECUTION_MAX_STEPS,
-              abortSignal: AbortSignal.timeout(STEP_EXECUTION_TIMEOUT),
-              onReasoning: onReasoning
-                ? (reasoning) => onReasoning({ id, reasoning })
-                : undefined,
-              gateway: effectiveAi.gateway,
+        await maybeWithSpan({ capability: "step_execution", step: "cua_loop" }, () =>
+          runCUALoop({
+            page: tabManager.active(),
+            instruction: buildRunStepsPromptCUA({
+              auth,
+              steps: processedSteps,
+              step,
+              userFlow,
+              stepIndex: i,
             }),
+            maxSteps: STEP_EXECUTION_MAX_STEPS,
+            abortSignal: AbortSignal.timeout(STEP_EXECUTION_TIMEOUT),
+            onReasoning: onReasoning ? (reasoning) => onReasoning({ id, reasoning }) : undefined,
+            gateway: effectiveAi.gateway,
+          }),
         );
       } catch (error: unknown) {
         logger.error({ err: error }, `CUA step execution failed: ${step.description}`);
@@ -467,9 +464,9 @@ export const runSteps = async ({
     let pageScreenshotBeforeApplyingAction: string = "";
 
     if (step.waitUntil) {
-      pageScreenshotBeforeApplyingAction = (await tabManager.active().screenshot({ fullPage: false })).toString(
-        "base64",
-      );
+      pageScreenshotBeforeApplyingAction = (
+        await tabManager.active().screenshot({ fullPage: false })
+      ).toString("base64");
     }
 
     const stepModelId = effectiveAi.getModelId("stepExecution");
@@ -497,7 +494,7 @@ export const runSteps = async ({
               openrouter: {
                 reasoning: {
                   effort: "medium",
-                  exclude: true
+                  exclude: true,
                 },
               },
             },
@@ -728,7 +725,9 @@ export const runUserFlow = async ({
           prompt: `Convert the following text output into a valid JSON object with the specified properties:\n\n${text}`,
           output: Output.object({
             schema: z.object({
-              assertionPassed: z.boolean().describe("Indicates whether the assertion passed or not."),
+              assertionPassed: z
+                .boolean()
+                .describe("Indicates whether the assertion passed or not."),
               confidenceScore: z
                 .number()
                 .describe("Confidence score of the assertion, between 0 and 100."),
@@ -876,4 +875,11 @@ export { extractEmailContent, generateEmail } from "./email";
 export { assert } from "./assertion";
 
 export type { AssertionResult } from "./types";
-export { PassmarkError, StepExecutionError, ValidationError, AIModelError, CacheError, ConfigurationError } from "./errors";
+export {
+  PassmarkError,
+  StepExecutionError,
+  ValidationError,
+  AIModelError,
+  CacheError,
+  ConfigurationError,
+} from "./errors";

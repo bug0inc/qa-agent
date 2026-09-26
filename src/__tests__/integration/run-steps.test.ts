@@ -328,10 +328,7 @@ describe("runSteps", () => {
   it("call-level ai option applies to all steps without per-step override", async () => {
     const page = createMockPage();
 
-    const steps: Step[] = [
-      { description: "Step A" },
-      { description: "Step B" },
-    ];
+    const steps: Step[] = [{ description: "Step A" }, { description: "Step B" }];
 
     await runSteps({
       page,

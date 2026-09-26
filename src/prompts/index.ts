@@ -30,34 +30,37 @@ export const buildRunStepsPrompt = ({
     Current Step Index: ${stepIndex + 1} out of ${steps.length} steps.
     </StepIndex>
     
-    ${stepIndex + 1 < steps.length
-      ? `
+    ${
+      stepIndex + 1 < steps.length
+        ? `
     <NextStep>
     The next step (DO NOT EXECUTE THIS) is: "${steps[stepIndex + 1].description}"
     This is provided for context only. Stop immediately after completing the current step given above.
     </NextStep>`
-      : ""
+        : ""
     }
 
     Remember we're only interested in executing the current step right now. We'll have a separate run for the next step. So, do not execute any steps other than the current step mentioned above. Stop right after executing the current step.
 
-    ${step.data
-      ? `
+    ${
+      step.data
+        ? `
 Use the following data for the current step: 
 <Data>
 "${JSON.stringify(step.data)}".
 </Data>`.trim()
-      : ""
+        : ""
     }
 
-    ${auth
-      ? `
+    ${
+      auth
+        ? `
         If presented with login screen, log in to the website using the following credentials:
         <Auth>
         - Email: ${auth.email}
         - Password: ${auth.password}${auth.callbackUrl ? `\n        - Go to this callbackUrl post login: ${auth.callbackUrl}` : ""}
         </Auth>`
-      : ""
+        : ""
     }
 
     <Instructions>
@@ -93,23 +96,26 @@ export const buildRunUserFlowPrompt = ({
     ${userFlow}
     </UserFlow>
 
-    ${steps
-      ? `Follow these steps **exactly** to test the user flow:\n\n<Steps>\n${steps}\n- STOP user flow by calling \`browser_stop\` tool exactly once.\n</Steps>`
-      : ""
+    ${
+      steps
+        ? `Follow these steps **exactly** to test the user flow:\n\n<Steps>\n${steps}\n- STOP user flow by calling \`browser_stop\` tool exactly once.\n</Steps>`
+        : ""
     }
-    ${assertion
-      ? `<Assertion>\n\n${assertion}\n\n</Assertion>\n\n Double check your assertion analysis to ensure it's accurate.`
-      : ""
+    ${
+      assertion
+        ? `<Assertion>\n\n${assertion}\n\n</Assertion>\n\n Double check your assertion analysis to ensure it's accurate.`
+        : ""
     }
 
-    ${assertion
-      ? `<OutputFormat>
+    ${
+      assertion
+        ? `<OutputFormat>
         The output should contain the following information:
         - \`assertionPassed\`: A boolean indicating whether the assertion passed or not.
         - \`confidenceScore\`: A number between 0 and 100 indicating the confidence score of the assertion.
         - \`reasoning\`: A brief string explaining the reasoning behind the assertion.
     </OutputFormat>`
-      : ""
+        : ""
     }
 
     Follow these instructions carefully while testing the website:

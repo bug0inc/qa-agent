@@ -10,9 +10,7 @@ import { assertVideoFile, deleteGeminiFile, uploadVideoToGemini } from "./video"
 
 const assertionSchema = z.object({
   assertionPassed: z.boolean().describe("Indicates whether the assertion passed or not."),
-  confidenceScore: z
-    .number()
-    .describe("Confidence score of the assertion, between 0 and 100."),
+  confidenceScore: z.number().describe("Confidence score of the assertion, between 0 and 100."),
   reasoning: z
     .string()
     .describe(
@@ -57,7 +55,7 @@ export const assert = async ({
   images,
   failSilently,
   maxRetries = 1,
-  onRetry = (retryCount: number, previousResult: AssertionResult) => { },
+  onRetry = (retryCount: number, previousResult: AssertionResult) => {},
   video,
   videoFilePath,
 }: AssertionOptions): Promise<string> => {
@@ -106,31 +104,33 @@ export const assert = async ({
     const imageContent = images
       ? images.map((image) => ({ type: "image" as const, image }))
       : [
-        {
-          type: "image" as const,
-          image: (await resolvePage(page).screenshot({ fullPage: false })).toString("base64"),
-        },
-      ];
+          {
+            type: "image" as const,
+            image: (await resolvePage(page).screenshot({ fullPage: false })).toString("base64"),
+          },
+        ];
 
     const basePrompt = `
 You are an AI-powered QA Agent designed to test web applications.
 
 You have access to the following information. Based on this information, you'll tell us whether the assertion provided below should pass or not.
-${!images
-        ? `
+${
+  !images
+    ? `
 - An accessibility snapshot of the current page, which provides a detailed structure of the DOM
 - A screenshot of the current page`
-        : "- Screenshots from various stages of the user flow"
-      }
+    : "- Screenshots from various stages of the user flow"
+}
 
-${!images
-        ? `
+${
+  !images
+    ? `
 <Snapshot>
 ${snapshot}
 </Snapshot>
 `
-        : ""
-      }
+    : ""
+}
 
 <Assertion>
 ${assertion}
@@ -176,13 +176,13 @@ Never hallucinate. Be truthful and if you are not sure, use a low confidence sco
         temperature: 0,
         providerOptions: thinkingEnabled
           ? {
-            anthropic: {
-              thinking: { type: "enabled", budgetTokens: THINKING_BUDGET_DEFAULT },
-            },
-            openrouter: {
-              reasoning: { max_tokens: THINKING_BUDGET_DEFAULT },
-            },
-          }
+              anthropic: {
+                thinking: { type: "enabled", budgetTokens: THINKING_BUDGET_DEFAULT },
+              },
+              openrouter: {
+                reasoning: { max_tokens: THINKING_BUDGET_DEFAULT },
+              },
+            }
           : undefined,
         messages,
       });
@@ -205,15 +205,15 @@ Never hallucinate. Be truthful and if you are not sure, use a low confidence sco
         temperature: 0,
         providerOptions: thinkingEnabled
           ? {
-            google: {
-              thinkingConfig: {
-                thinkingBudget: THINKING_BUDGET_DEFAULT,
+              google: {
+                thinkingConfig: {
+                  thinkingBudget: THINKING_BUDGET_DEFAULT,
+                },
               },
-            },
-            openrouter: {
-              reasoning: { max_tokens: THINKING_BUDGET_DEFAULT },
-            },
-          }
+              openrouter: {
+                reasoning: { max_tokens: THINKING_BUDGET_DEFAULT },
+              },
+            }
           : undefined,
         messages,
         output: Output.object({ schema: assertionSchema }),
@@ -240,14 +240,15 @@ Gemini's Assessment:
 - Confidence: ${geminiResult.confidenceScore}%
 - Reasoning: ${geminiResult.reasoning}
 
-${!images
-          ? `
+${
+  !images
+    ? `
 <Snapshot>
 ${snapshot}
 </Snapshot>
 `
-          : ""
-        }
+    : ""
+}
 
 <Assertion>
 ${assertion}

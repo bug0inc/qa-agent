@@ -27,9 +27,9 @@ describe("cua config", () => {
   });
 
   it("configure throws when user tries to override cua model", () => {
-    expect(() =>
-      configure({ ai: { models: { cua: "custom-cua-model" } } }),
-    ).toThrow(/cua.*not user-configurable/);
+    expect(() => configure({ ai: { models: { cua: "custom-cua-model" } } })).toThrow(
+      /cua.*not user-configurable/,
+    );
     // Default still wins.
     expect(getModelId("cua")).toBe("gpt-5.5");
   });
@@ -83,9 +83,9 @@ describe("resolveAI", () => {
   });
 
   it("throws when an override sets models.cua (lock applies per-layer)", () => {
-    expect(() =>
-      resolveAI({ models: { cua: "custom-cua" } }),
-    ).toThrow(/cua.*not user-configurable/);
+    expect(() => resolveAI({ models: { cua: "custom-cua" } })).toThrow(
+      /cua.*not user-configurable/,
+    );
   });
 
   it("undefined override layers are ignored", () => {

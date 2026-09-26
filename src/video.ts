@@ -124,10 +124,7 @@ export async function uploadVideoToGemini(filePath: string): Promise<{
     file: filePath,
     config: { mimeType: VIDEO_MIME_TYPE },
   });
-  logger.debug(
-    { name: uploaded.name, state: uploaded.state },
-    "Gemini Files API upload accepted",
-  );
+  logger.debug({ name: uploaded.name, state: uploaded.state }, "Gemini Files API upload accepted");
 
   if (!uploaded.name) {
     throw new AIModelError("Gemini Files API did not return a file name after upload.");
@@ -224,10 +221,7 @@ Never hallucinate. If unsure, use a low confidence score.
     contents: [
       {
         role: "user",
-        parts: [
-          { fileData: { fileUri, mimeType: fileMimeType } },
-          { text: prompt },
-        ],
+        parts: [{ fileData: { fileUri, mimeType: fileMimeType } }, { text: prompt }],
       },
     ],
     config: {
