@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CUA mode** (`configure({ ai: { mode: "cua" } })`): execute `runSteps` and `runUserFlow` through OpenAI's Responses API with the built-in `computer` tool. Screenshot-driven, coordinate-based actions via Playwright's `page.mouse` / `page.keyboard`. Requires `OPENAI_API_KEY` and `gateway: "none"`; Redis step caching is skipped in this mode because coordinate actions aren't portable across viewport sizes.
 - `cua` model slot in `ModelConfig` (default: `gpt-5.5`). For now, you cannot override the CUA model.
 - `getMode()` helper and `AIMode` type exported from `src/config.ts`.
+- **File upload caching**: `browser_upload_file` now writes a step cache entry, so repeat runs replay the cached upload-button locator instead of re-resolving it through the model. The flow is unchanged — the file chooser is still opened by clicking the button and the files are still set with `fileChooser.setFiles`.
 
 ## [1.0.0] - 2026-03-27
 

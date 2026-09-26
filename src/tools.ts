@@ -22,6 +22,27 @@ export function resolveUploadPath(filePath: string, uploadBasePath: string): str
     : `${uploadBasePath}/${filePath}`;
 }
 
+/**
+ * Resolves the file paths a cached "uploadFile" step should attach. The two sources hold
+ * different things: `rawValue` (from the step's data) is an unresolved filename, while
+ * `cachedValue` was already resolved against the base path when the step was recorded and
+ * must be used as-is — resolving it again would re-prefix it whenever `uploadBasePath` is
+ * relative, which is the default.
+ */
+export function resolveCachedUploadPaths(
+  rawValue: string | undefined,
+  cachedValue: string | undefined,
+  uploadBasePath: string,
+): string[] {
+  return (rawValue ?? cachedValue ?? "")
+    .split(",")
+    .map((filePath) => filePath.trim())
+    .filter(Boolean)
+    .map((filePath) =>
+      rawValue === undefined ? filePath : resolveUploadPath(filePath, uploadBasePath),
+    );
+}
+
 type ToolSettings = {
   abortController?: AbortController;
   currentStep?: { description: string; data?: Record<string, string> };
@@ -588,14 +609,27 @@ class PlaywrightTools {
     const uploadBasePath = getConfig().uploadBasePath || "./uploads";
     const prefixedFilePaths = filePaths.map((filePath) => resolveUploadPath(filePath, uploadBasePath));
 
-    // File uploads are not cached for now as it needs a two step process
-    // We can solve this later by introducing multi-action caching if needed
+    let cachedLocator = "";
+
+    if (this.currentStep) {
+      cachedLocator = await this.resolveLocator(locator);
+    }
+
     const fileChooserPromise = this.page.waitForEvent("filechooser");
     await locator.click({ timeout: LOCATOR_ACTION_TIMEOUT });
     const fileChooser = await fileChooserPromise;
     await fileChooser.setFiles(prefixedFilePaths, {
       timeout: LOCATOR_ACTION_TIMEOUT,
     });
+
+    // Cached as a single "uploadFile" action: the locator stored is the button that opens
+    // the file chooser, and the replay in index.ts performs both steps against it.
+    this.prepareCacheData(
+      cachedLocator,
+      "uploadFile",
+      elementDescription,
+      prefixedFilePaths.join(","),
+    );
 
     return {
       success: true,

@@ -22,7 +22,7 @@ async function maybeWithSpan<T>(
 import { z } from "zod";
 import { buildRunStepsPrompt, buildRunUserFlowPrompt } from "./prompts";
 import { getRedis } from "./redis";
-import { getAItools } from "./tools";
+import { getAItools, resolveCachedUploadPaths } from "./tools";
 import { RunStepsOptions, UserFlowOptions } from "./types";
 import {
   runLocatorCode,
@@ -40,7 +40,7 @@ import {
   replacePlaceholders,
   resolveEmailPlaceholders,
 } from "./data-cache";
-import { resolveAI } from "./config";
+import { getConfig, resolveAI } from "./config";
 import { runCUALoop, buildRunStepsPromptCUA, buildRunUserFlowPromptCUA } from "./cua";
 import { applyExtraction } from "./extract";
 import { logger } from "./logger";
@@ -385,6 +385,22 @@ export const runSteps = async ({
         case "select-option":
           code = `await page.${locator}.describe('${description}').selectOption("${input}", { timeout: ${CACHED_ACTION_TIMEOUT} })`;
           break;
+        case "uploadFile": {
+          // `input` is deliberately not used here: see resolveCachedUploadPaths.
+          const uploadPaths = resolveCachedUploadPaths(
+            step.data?.value,
+            value,
+            getConfig().uploadBasePath || "./uploads",
+          );
+
+          code = `
+            const fileChooserPromise = page.waitForEvent('filechooser');
+            await page.${locator}.describe('${description}').click({ timeout: ${CACHED_ACTION_TIMEOUT} });
+            const fileChooser = await fileChooserPromise;
+            await fileChooser.setFiles(${JSON.stringify(uploadPaths)});
+          `;
+          break;
+        }
         case "waitForText":
           code = `await page.getByText("${value}", { exact: true }).first().waitFor({ state: "visible" })`;
           break;

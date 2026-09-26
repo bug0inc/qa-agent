@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveUploadPath } from "../tools";
+import { resolveCachedUploadPaths, resolveUploadPath } from "../tools";
 
 describe("resolveUploadPath", () => {
   it("returns absolute Unix paths as-is", () => {
@@ -31,5 +31,37 @@ describe("resolveUploadPath", () => {
   it("handles relative paths with subdirectories", () => {
     expect(resolveUploadPath("folder/file.png", "./uploads")).toBe("./uploads/folder/file.png");
     expect(resolveUploadPath("uploads/test/document.pdf", "./uploads")).toBe("./uploads/uploads/test/document.pdf");
+  });
+});
+
+describe("cached upload path resolution", () => {
+  it("resolves a raw filename coming from step.data", () => {
+    expect(resolveCachedUploadPaths("report.pdf", "", "./uploads")).toEqual([
+      "./uploads/report.pdf",
+    ]);
+  });
+
+  it("does not re-prefix the cached value when step.data has no value", () => {
+    expect(resolveCachedUploadPaths(undefined, "./uploads/a.pdf,/tmp/b.png", "./uploads")).toEqual([
+      "./uploads/a.pdf",
+      "/tmp/b.png",
+    ]);
+  });
+
+  it("prefers step.data over the cached value", () => {
+    expect(resolveCachedUploadPaths("fresh.pdf", "./uploads/stale.pdf", "./uploads")).toEqual([
+      "./uploads/fresh.pdf",
+    ]);
+  });
+
+  it("splits multiple raw filenames and skips empty entries", () => {
+    expect(resolveCachedUploadPaths("a.pdf, b.png,", "", "./uploads")).toEqual([
+      "./uploads/a.pdf",
+      "./uploads/b.png",
+    ]);
+  });
+
+  it("returns an empty list when neither source has a value", () => {
+    expect(resolveCachedUploadPaths(undefined, undefined, "./uploads")).toEqual([]);
   });
 });
