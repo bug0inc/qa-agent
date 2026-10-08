@@ -295,6 +295,73 @@ configure({
 });
 ```
 
+### Custom Providers
+
+If you use a self-hosted LLM proxy, corporate gateway, or any OpenAI-compatible endpoint, you can register custom providers via `configure()`. This lets you use any [Vercel AI SDK](https://ai-sdk.dev/providers)-compatible provider package.
+
+Install the SDK package you need (e.g. `@ai-sdk/openai-compatible` for generic OpenAI-compatible APIs):
+
+```bash
+npm install @ai-sdk/openai-compatible
+```
+
+Then register the provider and use it in model IDs:
+
+```typescript
+import { configure } from "passmark";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+
+configure({
+  ai: {
+    providers: {
+      "llm-proxy": {
+        createProvider: () => createOpenAICompatible({
+          name: "llm-proxy",
+          apiKey: process.env.LLM_PROXY_API_KEY!,
+          baseURL: `${process.env.LLM_PROXY_API_BASE_URL}/api/v1/proxy/openai/auto`,
+        }),
+      },
+    },
+    models: {
+      stepExecution: "llm-proxy/google/gemini-3.5-flash",
+      assertionPrimary: "llm-proxy/anthropic/claude-haiku-4.5",
+      assertionSecondary: "llm-proxy/google/gemini-3-flash",
+      utility: "llm-proxy/google/gemini-2.5-flash",
+    },
+  },
+});
+```
+
+You can also route **all** models through a custom provider by setting `gateway` to the provider name:
+
+```typescript
+configure({
+  ai: {
+    gateway: "llm-proxy",  // all models route through this provider
+    providers: {
+      "llm-proxy": {
+        createProvider: () => createOpenAICompatible({
+          name: "llm-proxy",
+          apiKey: process.env.LLM_PROXY_API_KEY!,
+          baseURL: process.env.LLM_PROXY_API_BASE_URL!,
+        }),
+        // Optional: remap passmark's default model IDs to your proxy's model names
+        models: {
+          "google/gemini-3-flash": "gemini-3-flash",
+          "anthropic/claude-haiku-4.5": "claude-haiku-4-5",
+        },
+      },
+    },
+  },
+});
+```
+
+Notes:
+- Provider instances are created lazily and cached — `createProvider()` is called only once per provider name.
+- Custom providers work with per-step and per-call `ai` overrides, the same as built-in providers.
+- Any `@ai-sdk/*` package can be used (e.g. `@ai-sdk/openai`, `@ai-sdk/anthropic`, `@ai-sdk/google`), not just `@ai-sdk/openai-compatible`.
+- Video assertions still require `GOOGLE_GENERATIVE_AI_API_KEY` regardless of custom providers (Gemini Files API is used directly).
+
 ## Environment Variables
 
 | Variable | Required | Default | Description |

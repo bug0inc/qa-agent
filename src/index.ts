@@ -473,7 +473,7 @@ export const runSteps = async ({
     }
 
     const stepModelId = effectiveAi.getModelId("stepExecution");
-    const model = resolveModel(stepModelId, effectiveAi.gateway);
+    const model = resolveModel(stepModelId, effectiveAi.gateway, effectiveAi.providers);
     logger.debug(
       `Using model: ${stepModelId} for step execution / gateway: ${effectiveAi.gateway}`,
     );
@@ -724,7 +724,7 @@ export const runUserFlow = async ({
 
       if (assertion) {
         const { output } = await generateText({
-          model: resolveModel(effectiveAi.getModelId("utility"), effectiveAi.gateway),
+          model: resolveModel(effectiveAi.getModelId("utility"), effectiveAi.gateway, effectiveAi.providers),
           prompt: `Convert the following text output into a valid JSON object with the specified properties:\n\n${text}`,
           output: Output.object({
             schema: z.object({
@@ -750,8 +750,8 @@ export const runUserFlow = async ({
 
   const model =
     effort === "low"
-      ? resolveModel(effectiveAi.getModelId("userFlowLow"), effectiveAi.gateway)
-      : resolveModel(effectiveAi.getModelId("userFlowHigh"), effectiveAi.gateway);
+      ? resolveModel(effectiveAi.getModelId("userFlowLow"), effectiveAi.gateway, effectiveAi.providers)
+      : resolveModel(effectiveAi.getModelId("userFlowHigh"), effectiveAi.gateway, effectiveAi.providers);
 
   const { tools } = getAItools(page, {
     abortController,
@@ -803,7 +803,7 @@ export const runUserFlow = async ({
 
     if (assertion) {
       const { output } = await generateText({
-        model: resolveModel(effectiveAi.getModelId("utility"), effectiveAi.gateway),
+        model: resolveModel(effectiveAi.getModelId("utility"), effectiveAi.gateway, effectiveAi.providers),
         prompt: `Convert the following text output into a valid JSON object with the specified properties:\n\n${text}`,
         output: Output.object({
           schema: z.object({
@@ -868,7 +868,7 @@ export const executeWithAutoHealing = async (config: {
 };
 
 export { configure } from "./config";
-export type { EmailProvider } from "./config";
+export type { EmailProvider, CustomProviderConfig } from "./config";
 export { emailsinkProvider } from "./providers/emailsink";
 
 export { extractEmailContent, generateEmail } from "./email";

@@ -1,3 +1,4 @@
+import type { Provider } from "ai";
 import { initTelemetry } from "./instrumentation";
 
 export type EmailProvider = {
@@ -11,7 +12,7 @@ export type EmailProvider = {
   extractContent: (params: { email: string; prompt: string }) => Promise<string>;
 };
 
-export type AIGateway = "vercel" | "openrouter" | "opencodezen" | "cloudflare" | "none";
+export type AIGateway = "vercel" | "openrouter" | "opencodezen" | "cloudflare" | "none" | (string & {});
 
 /**
  * Execution mode for browser automation.
@@ -20,6 +21,49 @@ export type AIGateway = "vercel" | "openrouter" | "opencodezen" | "cloudflare" |
  *   actions. Requires OPENAI_API_KEY and gateway: "none".
  */
 export type AIMode = "snapshot" | "cua";
+
+/**
+ * Configuration for a custom AI provider. Register custom providers via
+ * `configure({ ai: { providers: { "my-proxy": { ... } } } })` and reference
+ * them in model IDs as `"my-proxy/model-name"`.
+ *
+ * @example
+ * ```typescript
+ * import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+ *
+ * configure({
+ *   ai: {
+ *     providers: {
+ *       "llm-proxy": {
+ *         createProvider: () => createOpenAICompatible({
+ *           name: "llm-proxy",
+ *           apiKey: process.env.LLM_PROXY_API_KEY,
+ *           baseURL: process.env.LLM_PROXY_BASE_URL,
+ *         }),
+ *       },
+ *     },
+ *     models: {
+ *       stepExecution: "llm-proxy/gemini-3.5-flash",
+ *     },
+ *   },
+ * });
+ * ```
+ */
+export type CustomProviderConfig = {
+  /**
+   * A function that creates a Vercel AI SDK provider instance.
+   * Called lazily on first use and cached thereafter.
+   * Any `@ai-sdk/*` package (e.g. `@ai-sdk/openai-compatible`,
+   * `@ai-sdk/openai`, `@ai-sdk/anthropic`) can be used.
+   */
+  createProvider: () => Provider;
+  /**
+   * Optional model alias map. Keys are the model names used in passmark
+   * config (e.g. "gemini-3.5-flash"), values are the actual model IDs
+   * to pass to the provider SDK. When absent, model names pass through as-is.
+   */
+  models?: Record<string, string>;
+};
 
 export type ModelConfig = {
   /** Model for executing individual steps. Default: google/gemini-3-flash */
@@ -65,6 +109,12 @@ export type AIOverride = {
   gateway?: AIGateway;
   mode?: AIMode;
   models?: ModelConfig;
+  /**
+   * Register custom AI providers by name. The name becomes the provider
+   * prefix in model IDs (e.g. `"my-proxy/gpt-4"`). Can also be used as a
+   * gateway value to route all models through one custom provider.
+   */
+  providers?: Record<string, CustomProviderConfig>;
 };
 
 export type RedisConfig = {
@@ -201,6 +251,8 @@ export type ResolvedAI = {
   mode: AIMode;
   gateway: AIGateway;
   getModelId: (key: keyof ModelConfig) => string;
+  /** Merged custom providers from all config layers (global → call → step). */
+  providers?: Record<string, CustomProviderConfig>;
 };
 
 const CUA_LOCK_MESSAGE =
@@ -241,10 +293,27 @@ export function resolveAI(...overrides: (AIOverride | undefined)[]): ResolvedAI 
     }
     return DEFAULT_MODELS[key];
   };
-  return { mode, gateway, getModelId: getModelIdForKey };
+  // Merge providers: later layers win on a per-key basis
+  let mergedProviders: Record<string, CustomProviderConfig> | undefined;
+  for (const layer of layers) {
+    if (layer?.providers) {
+      mergedProviders = { ...(mergedProviders ?? {}), ...layer.providers };
+    }
+  }
+  return { mode, gateway, getModelId: getModelIdForKey, providers: mergedProviders };
 }
 
 /** @internal Reset config to empty state. Used for testing only. */
 export function resetConfig() {
   globalConfig = {};
+  // Also reset the provider instance cache so tests start fresh
+  resetProviderCache();
+}
+
+// Lazy import to avoid circular dependency — set by models.ts at module load
+let resetProviderCache: () => void = () => {};
+
+/** @internal Called by models.ts to register its cache-reset function. */
+export function _registerProviderCacheReset(fn: () => void) {
+  resetProviderCache = fn;
 }

@@ -3,9 +3,9 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
-import { gateway, type LanguageModel } from "ai";
+import { gateway, type LanguageModel, type Provider } from "ai";
 import { wrapAISDKModel } from "axiom/ai";
-import { type AIGateway, getConfig } from "./config";
+import { type AIGateway, type CustomProviderConfig, getConfig, _registerProviderCacheReset } from "./config";
 import { isAxiomEnabled } from "./instrumentation";
 
 function wrapModel(model: LanguageModel): LanguageModel {
@@ -19,6 +19,26 @@ let _openrouter: ReturnType<typeof createOpenRouter> | null = null;
 let _opencodezen: ReturnType<typeof createOpenAI> | null = null;
 let _cloudflareGoogle: ReturnType<typeof createGoogleGenerativeAI> | null = null;
 let _cloudflareAnthropic: ReturnType<typeof createAnthropic> | null = null;
+
+/**
+ * Cache for custom provider instances. Ensures `createProvider()` is called
+ * only once per provider name per process lifetime.
+ */
+const _customProviderCache = new Map<string, Provider>();
+
+function getCachedProvider(name: string, config: CustomProviderConfig): Provider {
+  let provider = _customProviderCache.get(name);
+  if (!provider) {
+    provider = config.createProvider();
+    _customProviderCache.set(name, provider);
+  }
+  return provider;
+}
+
+// Register the cache-reset function so resetConfig() can clear it during tests
+_registerProviderCacheReset(() => {
+  _customProviderCache.clear();
+});
 
 function getGoogleProvider() {
   if (!_google) {
@@ -217,16 +237,57 @@ function resolveOpenCodeZenModelId(modelId: string): string {
  * provider-native paths (google-ai-studio, anthropic) so provider-specific fields
  * like Gemini's thought_signature pass through unchanged.
  * When gateway is "none" (default), creates a direct provider instance with alias resolution.
+ * When gateway matches a custom provider name, all models route through that provider.
  * All paths wrap the model with wrapAISDKModel for tracing when Axiom is enabled.
  *
  * @param modelId - Canonical model id, e.g. "google/gemini-3-flash".
  * @param gatewayOverride - Optional resolved gateway for this call. When omitted,
  *   falls back to the global `configure()` value. Pass this when a per-step or
  *   per-call `ai` override changes the gateway for a single resolution.
+ * @param customProviders - Optional map of custom provider configurations.
+ *   When omitted, falls back to the global `configure()` providers.
  */
-export function resolveModel(modelId: string, gatewayOverride?: AIGateway): LanguageModel {
+export function resolveModel(
+  modelId: string,
+  gatewayOverride?: AIGateway,
+  customProviders?: Record<string, CustomProviderConfig>,
+): LanguageModel {
   const gatewayConfig = gatewayOverride ?? getConfig().ai?.gateway ?? "none";
+  const providers = customProviders ?? getConfig().ai?.providers;
 
+  // --- Custom provider resolution (checked before built-in providers) ---
+  if (providers) {
+    // Gateway mode: the gateway value itself names a custom provider,
+    // so all models route through it (e.g. gateway: "llm-proxy")
+    if (
+      gatewayConfig !== "none" &&
+      gatewayConfig !== "vercel" &&
+      gatewayConfig !== "openrouter" &&
+      gatewayConfig !== "opencodezen" &&
+      gatewayConfig !== "cloudflare" &&
+      providers[gatewayConfig]
+    ) {
+      const cp = providers[gatewayConfig];
+      const provider = getCachedProvider(gatewayConfig, cp);
+      const resolvedModelName = cp.models?.[modelId] ?? modelId;
+      return wrapModel(provider.languageModel(resolvedModelName));
+    }
+
+    // Provider-prefix mode: "my-proxy/gpt-4" → providerKey="my-proxy", model="gpt-4"
+    const slashIdx = modelId.indexOf("/");
+    if (slashIdx !== -1) {
+      const providerKey = modelId.slice(0, slashIdx);
+      if (providers[providerKey]) {
+        const cp = providers[providerKey];
+        const modelName = modelId.slice(slashIdx + 1);
+        const resolvedModelName = cp.models?.[modelName] ?? modelName;
+        const provider = getCachedProvider(providerKey, cp);
+        return wrapModel(provider.languageModel(resolvedModelName));
+      }
+    }
+  }
+
+  // --- Built-in provider resolution ---
   if (gatewayConfig === "vercel") {
     if (!process.env.AI_GATEWAY_API_KEY) {
       throw new ConfigurationError(

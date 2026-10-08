@@ -1,5 +1,13 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { configure, getConfig, getModelId, resetConfig, DEFAULT_MODELS } from "../config";
+import {
+  configure,
+  getConfig,
+  getModelId,
+  resetConfig,
+  DEFAULT_MODELS,
+  resolveAI,
+  type CustomProviderConfig,
+} from "../config";
 
 describe("config", () => {
   beforeEach(() => {
@@ -95,5 +103,72 @@ describe("config", () => {
 
     resetConfig();
     expect(getConfig()).toEqual({});
+  });
+
+  describe("custom providers", () => {
+    const mockProvider: CustomProviderConfig = {
+      createProvider: () => ({
+        languageModel: (id: string) => id as never,
+      }) as never,
+    };
+
+    it("configure stores custom providers", () => {
+      configure({
+        ai: {
+          providers: { "my-proxy": mockProvider },
+        },
+      });
+      expect(getConfig().ai?.providers).toBeDefined();
+      expect(getConfig().ai?.providers?.["my-proxy"]).toBe(mockProvider);
+    });
+
+    it("configure stores custom providers with model aliases", () => {
+      const providerWithAliases: CustomProviderConfig = {
+        ...mockProvider,
+        models: { "gemini-flash": "google/gemini-3.5-flash" },
+      };
+      configure({
+        ai: {
+          providers: { "corp-proxy": providerWithAliases },
+        },
+      });
+      expect(getConfig().ai?.providers?.["corp-proxy"]?.models).toEqual({
+        "gemini-flash": "google/gemini-3.5-flash",
+      });
+    });
+
+    it("resolveAI merges providers from global config and overrides", () => {
+      const providerA: CustomProviderConfig = {
+        createProvider: () => ({ languageModel: () => "a" }) as never,
+      };
+      const providerB: CustomProviderConfig = {
+        createProvider: () => ({ languageModel: () => "b" }) as never,
+      };
+      configure({
+        ai: { providers: { alpha: providerA } },
+      });
+      const resolved = resolveAI({ providers: { beta: providerB } });
+      expect(resolved.providers?.["alpha"]).toBe(providerA);
+      expect(resolved.providers?.["beta"]).toBe(providerB);
+    });
+
+    it("resolveAI later overrides win on same provider key", () => {
+      const providerV1: CustomProviderConfig = {
+        createProvider: () => ({ languageModel: () => "v1" }) as never,
+      };
+      const providerV2: CustomProviderConfig = {
+        createProvider: () => ({ languageModel: () => "v2" }) as never,
+      };
+      configure({
+        ai: { providers: { "my-proxy": providerV1 } },
+      });
+      const resolved = resolveAI({ providers: { "my-proxy": providerV2 } });
+      expect(resolved.providers?.["my-proxy"]).toBe(providerV2);
+    });
+
+    it("resolveAI returns undefined providers when none configured", () => {
+      const resolved = resolveAI();
+      expect(resolved.providers).toBeUndefined();
+    });
   });
 });
