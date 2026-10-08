@@ -49,11 +49,16 @@ describe("config", () => {
     expect(getConfig().uploadBasePath).toBe("./second");
   });
 
-  it("getModelId returns default for each DEFAULT_MODELS key", () => {
+  it("getModelId returns default for each of the keys", () => {
     const keys = Object.keys(DEFAULT_MODELS) as Array<keyof typeof DEFAULT_MODELS>;
-    expect(keys.length).toBeGreaterThanOrEqual(7);
+    expect(keys).toHaveLength(9);
 
     for (const key of keys) {
+      // assertionModels is a special case—it's not a simple string ID like the others
+      if (key === "assertionModels") {
+        expect(DEFAULT_MODELS[key]).toBeUndefined();
+        continue;
+      }
       expect(getModelId(key)).toBe(DEFAULT_MODELS[key]);
     }
   });
