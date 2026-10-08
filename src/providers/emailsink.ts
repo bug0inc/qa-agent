@@ -1,4 +1,5 @@
 import type { EmailProvider } from "../config";
+import { EMAIL_FETCH_TIMEOUT } from "../constants";
 
 /**
  *  Emailsink is a simple email service by Bug0 that allows you to receive emails at a unique address and retrieve their content via an API
@@ -15,7 +16,9 @@ export function emailsinkProvider(options: { apiKey?: string }): EmailProvider {
       if (options.apiKey) {
         url += `&secret=${encodeURIComponent(options.apiKey)}`;
       }
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        signal: AbortSignal.timeout(EMAIL_FETCH_TIMEOUT),
+      });
       const data = (await response.json()) as { result: string | undefined };
 
       let result = data.result;
