@@ -5,6 +5,24 @@ import { logger } from "./logger";
 let client: Redis | null = null;
 let initialized = false;
 
+function initRedisHandlers(client: Redis): void {
+  // Handle connection errors gracefully without crashing
+  client.on("error", (err) => {
+    logger.warn(`Redis connection error: ${err.message}`);
+  });
+
+  client.on("connecting", () => {
+    logger.debug("Redis: attempting to connect...");
+  });
+
+  client.on("ready", () => {
+    logger.debug("Redis: connected and ready");
+  });
+
+  client.on("reconnecting", () => {
+    logger.debug("Redis: reconnecting after connection loss...");
+  });
+}
 /**
  * Returns a memoized Redis client. Reads `configure({ redis: { url } })` first,
  * then falls back to `process.env.REDIS_URL`. Returns null when neither is set,
@@ -12,6 +30,9 @@ let initialized = false;
  *
  * Lazy: the connection is opened on first call so users can call `configure()`
  * before any Redis-dependent code path runs.
+ *
+ * Includes automatic reconnect strategy with exponential backoff to handle
+ * transient failures without disabling caching mid-test.
  */
 export function getRedis(): Redis | null {
   if (initialized) return client;
@@ -26,7 +47,35 @@ export function getRedis(): Redis | null {
     return null;
   }
 
-  client = new Redis(url);
+  // Configure Redis client with reconnect strategy for transient failures
+  client = new Redis(url, {
+    // Connection timeouts
+    connectTimeout: 10000,
+    commandTimeout: 5000,
+
+    // Reconnect strategy: retry with exponential backoff, max 10 retries
+    retryStrategy: (times) => {
+      const delay = Math.min(times * 50, 2000); // Cap at 2 seconds
+      if (times > 10) {
+        logger.error(`Redis: max reconnection attempts (${times}) exceeded`);
+        return null; // Stop retrying
+      }
+      logger.debug(`Redis: reconnection attempt ${times}, retrying in ${delay}ms`);
+      return delay;
+    },
+
+    // Reconnect on READONLY errors
+    reconnectOnError: (err) => {
+      const targetError = "READONLY";
+      if (err.message.includes(targetError)) {
+        // Only reconnect if error is a READONLY error
+        return true;
+      }
+      return false;
+    },
+  });
+  initRedisHandlers(client);
+
   return client;
 }
 
