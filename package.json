@@ -40,6 +40,7 @@
     "playwright-core": "^1.59.0"
   },
   "dependencies": {
+    "@ai-sdk/amazon-bedrock": "^5.0.16",
     "@ai-sdk/anthropic": "^3.0.69",
     "@ai-sdk/google": "^3.0.63",
     "@ai-sdk/google-vertex": "^4.0.105",

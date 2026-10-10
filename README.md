@@ -33,6 +33,8 @@ Alternatively, you can use an AI gateway like Vercel AI Gateway, OpenRouter, or 
 
 You can also route requests through Cloudflare AI Gateway for observability, caching, and rate limiting. Unlike Vercel/OpenRouter/OpenCode Zen, Cloudflare is a proxy (not a reseller), so you still need your own `ANTHROPIC_API_KEY` / `GOOGLE_GENERATIVE_AI_API_KEY` alongside `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_AI_GATEWAY` (and `CLOUDFLARE_AI_GATEWAY_API_KEY` if the gateway has authentication enabled).
 
+**Using AWS Bedrock:** If you prefer to use AWS Bedrock for Claude models, you can set AWS credentials instead of (or in addition to) `ANTHROPIC_API_KEY`. Bedrock requires `AWS_REGION` and AWS credentials (either `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`, or the default AWS credential provider chain). Then use model IDs like `bedrock/claude-3-5-sonnet` in your configuration. See [AWS Bedrock Support](#aws-bedrock-support) for details.
+
 Set your Playwright project to read `.env` by adding the following to `playwright.config.ts`  (after `import { defineConfig, devices } from '@playwright/test';`):
 
 ```typescript
@@ -303,6 +305,10 @@ configure({
 | `ANTHROPIC_API_KEY` | Yes | - | Anthropic API key for Claude models |
 | `GOOGLE_GENERATIVE_AI_API_KEY` | Yes | - | Google API key for Gemini models. Also required for `video: true` assertions regardless of gateway (file URIs are tied to the uploading account). |
 | `OPENAI_API_KEY` | No | - | OpenAI API key for OpenAI models (required for CUA mode; must have Responses-API `computer` tool access) |
+| `AWS_REGION` | No | - | AWS region for Bedrock (required when using `bedrock/...` model IDs) |
+| `AWS_ACCESS_KEY_ID` | No | - | AWS access key ID for Bedrock (can also use AWS credential provider chain) |
+| `AWS_SECRET_ACCESS_KEY` | No | - | AWS secret access key for Bedrock (can also use AWS credential provider chain) |
+| `AWS_SESSION_TOKEN` | No | - | AWS session token for Bedrock (optional, for temporary credentials) |
 | `AI_GATEWAY_API_KEY` | If gateway=vercel | - | Vercel AI Gateway API key |
 | `OPENROUTER_API_KEY` | If gateway=openrouter | - | OpenRouter API key |
 | `OPENCODEZEN_API_KEY` | If gateway=opencodezen | - | OpenCode Zen API key |
@@ -425,6 +431,137 @@ Step Request
     |
     v
 [Assertions] (Claude + Gemini consensus)
+```
+
+## AWS Bedrock Support
+
+Passmark supports AWS Bedrock as an alternative provider for Claude models. This is useful if you already have AWS infrastructure or want to use AWS-managed AI services.
+
+### Configuration
+
+To use AWS Bedrock, you need to set up AWS credentials and specify the region. Bedrock automatically uses the **AWS credential provider chain**, which includes:
+
+1. **Environment variables**: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`
+2. **Shared credentials file**: `~/.aws/credentials`
+3. **AWS config file**: `~/.aws/config`
+4. **IAM roles**: EC2 instance profiles, ECS task roles, Lambda execution roles
+5. **Other standard AWS credential sources**
+
+This means you can authenticate in multiple ways depending on your environment:
+
+**Option 1: Explicit Environment Variables**
+```typescript
+// Set these environment variables
+AWS_REGION=us-east-1
+AWS_ACCESS_KEY_ID=your_access_key
+AWS_SECRET_ACCESS_KEY=your_secret_key
+```
+
+**Option 2: AWS Profiles (Shared Credentials)**
+```typescript
+// Only specify the region - credentials from ~/.aws/credentials
+AWS_REGION=us-east-1
+AWS_PROFILE=my-profile  // Optional: specify which profile to use
+```
+
+**Option 3: IAM Roles (EC2, ECS, Lambda)**
+```typescript
+// Only specify the region - credentials from IAM role
+AWS_REGION=us-east-1
+```
+
+### Using Bedrock Models
+
+Once configured, use the `bedrock/` prefix with model names:
+
+```typescript
+import { configure } from "passmark";
+
+configure({
+  ai: {
+    gateway: "none", // Bedrock requires direct access
+    models: {
+      stepExecution: "bedrock/claude-3-5-sonnet",
+      assertionPrimary: "bedrock/claude-3-5-haiku",
+      // Mix Bedrock with other providers
+      assertionSecondary: "google/gemini-3-flash",
+    },
+  },
+});
+```
+
+### Available Bedrock Model IDs
+
+Passmark provides friendly aliases that map to Bedrock model identifiers. You can use either the friendly alias or the full Bedrock model ID:
+
+| Friendly ID | Bedrock Model ID |
+|-------------|------------------|
+| `bedrock/claude-3-5-sonnet` | `anthropic.claude-3-5-sonnet-20241022-v2:0` |
+| `bedrock/claude-3-5-haiku` | `anthropic.claude-3-5-haiku-20241022-v1:0` |
+| `bedrock/claude-3-opus` | `anthropic.claude-3-opus-20240229-v1:0` |
+| `bedrock/claude-3-sonnet` | `anthropic.claude-3-sonnet-20240229-v1:0` |
+| `bedrock/claude-3-haiku` | `anthropic.claude-3-haiku-20240307-v1:0` |
+
+**Using Full Model IDs**: You can always specify the full Bedrock model ID directly if you need a specific version that isn't aliased:
+
+```typescript
+configure({
+  ai: {
+    models: {
+      // Use friendly alias
+      stepExecution: "bedrock/claude-3-5-sonnet",
+      
+      // Or use full Bedrock model ID
+      assertionPrimary: "bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
+    },
+  },
+});
+```
+
+As AWS releases new model versions, you can use them immediately with their full model ID even before a friendly alias is added to Passmark.
+
+### Notes
+
+- **Gateway compatibility**: Bedrock models require `gateway: "none"`. They cannot be used with `gateway: "vercel"`, `"openrouter"`, `"opencodezen"`, or `"cloudflare"`.
+- **IAM permissions**: Ensure your AWS credentials have the `bedrock:InvokeModel` permission for the models you want to use.
+- **Region availability**: Not all Bedrock models are available in all regions. Check the [AWS Bedrock documentation](https://docs.aws.amazon.com/bedrock/latest/userguide/models-regions.html) for model availability by region.
+- **Mixed providers**: You can mix Bedrock models with models from other providers (Google, Anthropic direct, etc.) in the same configuration.
+
+### Example: Full Bedrock Setup
+
+```typescript
+import { test, expect } from "@playwright/test";
+import { runSteps, configure } from "passmark";
+
+configure({
+  ai: {
+    gateway: "none",
+    models: {
+      stepExecution: "bedrock/claude-3-5-sonnet",
+      userFlowLow: "google/gemini-3-flash",
+      userFlowHigh: "google/gemini-3.1-pro-preview",
+      assertionPrimary: "bedrock/claude-3-5-haiku",
+      assertionSecondary: "google/gemini-3-flash",
+      assertionArbiter: "google/gemini-3.1-pro-preview",
+      utility: "google/gemini-2.5-flash",
+    },
+  },
+});
+
+test("Shopping cart test with Bedrock", async ({ page }) => {
+  await runSteps({
+    page,
+    userFlow: "Add product to cart",
+    steps: [
+      { description: "Navigate to https://demo.vercel.store" },
+      { description: "Click Acme Circles T-Shirt" },
+      { description: "Add to cart" },
+    ],
+    assertions: [{ assertion: "Cart shows 1 item" }],
+    test,
+    expect,
+  });
+});
 ```
 
 ## Known Limitations
