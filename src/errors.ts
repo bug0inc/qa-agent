@@ -90,3 +90,12 @@ export class ValidationError extends PassmarkError {
     super(message, "VALIDATION_ERROR");
   }
 }
+
+/**
+ * Thrown when visual regression explanation fails.
+ */
+export class VisualRegressionError extends PassmarkError {
+  constructor(message: string) {
+    super(message, "VISUAL_REGRESSION_ERROR");
+  }
+}

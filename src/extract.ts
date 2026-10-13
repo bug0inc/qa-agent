@@ -2,12 +2,7 @@ import { generateText, Output } from "ai";
 import { z } from "zod";
 import { getModelId } from "./config";
 import { resolveModel } from "./models";
-import { ValidationError } from "./errors";
-import { GlobalPlaceholders, LocalPlaceholders, saveGlobalValues } from "./data-cache";
-import { logger } from "./logger";
-import { ExtractionConfig } from "./types";
-import { safeSnapshot } from "./utils";
-import { createTabManager } from "./utils/tab-manager";
+import { trackUsage } from "./cost";
 
 const extractionSchema = z.object({
   extractedValue: z.string().describe("The extracted value based on the prompt"),
@@ -41,8 +36,9 @@ export async function extractDataWithAI({
   url: string;
   prompt: string;
 }): Promise<string> {
-  const { output } = await generateText({
-    model: resolveModel(getModelId("utility")),
+  const modelId = getModelId("utility");
+  const result = await generateText({
+    model: resolveModel(modelId),
     temperature: 0,
     output: Output.object({ schema: extractionSchema }),
     prompt: `You are an AI assistant that extracts specific data from web pages.
@@ -72,7 +68,11 @@ ${prompt}
 Return the extracted value.`,
   });
 
-  return output.extractedValue;
+  if (result.usage) {
+    await trackUsage(modelId, result.usage);
+  }
+
+  return result.output.extractedValue;
 }
 
 /**

@@ -164,3 +164,20 @@ export type RunStepsOptions = {
     }
     | { assertions?: never; expect?: never }
   );
+
+export type VisualExplanationResult = {
+  explanation: string;
+  isBug: boolean;
+  confidence: number;
+  diffAreas?: string[];
+};
+
+export type VisualDiffOptions = {
+  page: Page;
+  expectedImage?: string | Buffer;
+  actualImage?: string | Buffer;
+  test?: TestType<
+    PlaywrightTestArgs & PlaywrightTestOptions,
+    PlaywrightWorkerArgs & PlaywrightWorkerOptions
+  >;
+};

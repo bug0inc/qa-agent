@@ -12,13 +12,7 @@ import { withSpan } from "axiom/ai";
 import shortid from "shortid";
 import { initTelemetry, isAxiomEnabled } from "./instrumentation";
 
-// Only use withSpan when Axiom is configured, otherwise just execute the function directly
-async function maybeWithSpan<T>(
-  meta: { capability: string; step: string },
-  fn: () => Promise<T>,
-): Promise<T> {
-  return isAxiomEnabled() ? withSpan(meta, async () => fn()) : fn();
-}
+import { maybeWithSpan } from "./utils/telemetry";
 import { z } from "zod";
 import { buildRunStepsPrompt, buildRunUserFlowPrompt } from "./prompts";
 import { getRedis } from "./redis";
@@ -45,6 +39,8 @@ import { runCUALoop, buildRunStepsPromptCUA, buildRunUserFlowPromptCUA } from ".
 import { applyExtraction } from "./extract";
 import { logger } from "./logger";
 import { resolveModel } from "./models";
+export * from "./visual";
+import { trackUsage } from "./cost";
 import { runSecureScript } from "./utils/secure-script-runner";
 import { createTabManager } from "./utils/tab-manager";
 import {
@@ -472,10 +468,10 @@ export const runSteps = async ({
       );
     }
 
-    const stepModelId = effectiveAi.getModelId("stepExecution");
-    const model = resolveModel(stepModelId, effectiveAi.gateway);
+    const modelId = getModelId("stepExecution");
+    const model = resolveModel(modelId);
     logger.debug(
-      `Using model: ${stepModelId} for step execution / gateway: ${effectiveAi.gateway}`,
+      `Using model: ${modelId} for step execution / gateway: ${getConfig().ai?.gateway ?? "none"}`,
     );
 
     try {
@@ -525,6 +521,10 @@ export const runSteps = async ({
             }),
           }),
       );
+
+      if (result.usage) {
+        await trackUsage(modelId, result.usage);
+      }
 
       // Cache the step action only if it was a single tool call (simple, deterministic action).
       // Multi-step actions are not cached as they may be non-deterministic.
@@ -723,8 +723,9 @@ export const runUserFlow = async ({
       );
 
       if (assertion) {
-        const { output } = await generateText({
-          model: resolveModel(effectiveAi.getModelId("utility"), effectiveAi.gateway),
+        const utilityModelId = getModelId("utility");
+        const { output, usage } = await generateText({
+          model: resolveModel(utilityModelId),
           prompt: `Convert the following text output into a valid JSON object with the specified properties:\n\n${text}`,
           output: Output.object({
             schema: z.object({
@@ -738,6 +739,11 @@ export const runUserFlow = async ({
             }),
           }),
         });
+        
+        if (usage) {
+          await trackUsage(utilityModelId, usage);
+        }
+
         return output;
       }
 
@@ -758,7 +764,7 @@ export const runUserFlow = async ({
   });
 
   try {
-    const { text } = await maybeWithSpan(
+    const result = await maybeWithSpan(
       { capability: "user_flow_execution", step: "agentic_tool_calling" },
       async () => {
         return generateText({
@@ -801,10 +807,18 @@ export const runUserFlow = async ({
       },
     );
 
+    if (result.usage) {
+      await trackUsage(
+        effort === "low" ? getModelId("userFlowLow") : getModelId("userFlowHigh"),
+        result.usage,
+      );
+    }
+
     if (assertion) {
-      const { output } = await generateText({
-        model: resolveModel(effectiveAi.getModelId("utility"), effectiveAi.gateway),
-        prompt: `Convert the following text output into a valid JSON object with the specified properties:\n\n${text}`,
+      const utilityModelId = getModelId("utility");
+      const { output, usage } = await generateText({
+        model: resolveModel(utilityModelId),
+        prompt: `Convert the following text output into a valid JSON object with the specified properties:\n\n${result.text}`,
         output: Output.object({
           schema: z.object({
             assertionPassed: z.boolean().describe("Indicates whether the assertion passed or not."),
@@ -818,10 +832,14 @@ export const runUserFlow = async ({
         }),
       });
 
+      if (usage) {
+        await trackUsage(utilityModelId, usage);
+      }
+
       return output;
     }
 
-    return text;
+    return result.text;
   } catch (error: unknown) {
     logger.error({ err: error }, "Error during user flow execution");
   }
