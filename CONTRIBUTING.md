@@ -42,6 +42,7 @@ This runs the TypeScript compiler (`tsc`). Fix any type errors before submitting
 - `feature/description` for new features
 - `fix/description` for bug fixes
 - `docs/description` for documentation changes
+- `test/description` for test-only changes
 
 ### Commit Messages
 
@@ -51,6 +52,7 @@ Use clear, concise commit messages:
 feat: add support for custom model providers
 fix: handle empty email extraction gracefully
 docs: update environment variables table
+test: add test contribution naming conventions
 ```
 
 ### Pull Requests
