@@ -53,6 +53,24 @@ describe("flowKey", () => {
     const withSecret = flowKey("my-flow", { secret: "s3cret" });
     expect(plain).not.toBe(withSecret);
   });
+
+  it("returns the same key for the same flow and secret", () => {
+  const a = flowKey("my-flow", { secret: "s3cret" });
+  const b = flowKey("my-flow", { secret: "s3cret" });
+  expect(a).toBe(b);
+  });
+  
+  it("returns different keys for different secrets", () => {
+  const a = flowKey("my-flow", { secret: "secret1" });
+  const b = flowKey("my-flow", { secret: "secret2" });
+  expect(a).not.toBe(b);
+  });
+
+  it("produces different keys for same secret but different flows", () => {
+  const a = flowKey("flow-a", { secret: "s3cret" });
+  const b = flowKey("flow-b", { secret: "s3cret" });
+  expect(a).not.toBe(b);
+  });
 });
 
 describe("generatePhoneNumber", () => {
