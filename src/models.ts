@@ -17,6 +17,7 @@ let _anthropic: ReturnType<typeof createAnthropic> | null = null;
 let _openai: ReturnType<typeof createOpenAI> | null = null;
 let _openrouter: ReturnType<typeof createOpenRouter> | null = null;
 let _opencodezen: ReturnType<typeof createOpenAI> | null = null;
+let _cheaperinference: ReturnType<typeof createOpenAI> | null = null;
 let _cloudflareGoogle: ReturnType<typeof createGoogleGenerativeAI> | null = null;
 let _cloudflareAnthropic: ReturnType<typeof createAnthropic> | null = null;
 
@@ -89,6 +90,21 @@ function getOpenCodeZenProvider() {
     });
   }
   return _opencodezen;
+}
+
+function getCheaperInferenceProvider() {
+  if (!_cheaperinference) {
+    if (!process.env.CHEAPERINFERENCE_API_KEY) {
+      throw new ConfigurationError(
+        "CHEAPERINFERENCE_API_KEY isn't set. Add it to your environment (for example: export CHEAPERINFERENCE_API_KEY=your_key). See .env.example for reference.",
+      );
+    }
+    _cheaperinference = createOpenAI({
+      baseURL: "https://api.cheaperinference.com/v1",
+      apiKey: process.env.CHEAPERINFERENCE_API_KEY,
+    });
+  }
+  return _cheaperinference;
 }
 
 /**
@@ -204,6 +220,26 @@ function resolveOpenCodeZenModelId(modelId: string): string {
 }
 
 /**
+ * Maps canonical model IDs (provider/model) to Cheaper Inference model IDs.
+ * Cheaper Inference uses bare model IDs and dotted version numbers for Claude models.
+ */
+const CHEAPERINFERENCE_MODEL_ALIASES: Record<string, string> = {
+  "google/gemini-3-flash-preview": "gemini-3-flash",
+  "anthropic/claude-haiku-4-5": "claude-haiku-4.5",
+  "anthropic/claude-sonnet-4-6": "claude-sonnet-4.6",
+  "anthropic/claude-opus-4-7": "claude-opus-4.7",
+};
+
+function resolveCheaperInferenceModelId(modelId: string): string {
+  if (CHEAPERINFERENCE_MODEL_ALIASES[modelId]) {
+    return CHEAPERINFERENCE_MODEL_ALIASES[modelId];
+  }
+  // Strip provider prefix: "google/gemini-3-flash" → "gemini-3-flash"
+  const slashIndex = modelId.indexOf("/");
+  return slashIndex !== -1 ? modelId.slice(slashIndex + 1) : modelId;
+}
+
+/**
  * Resolves a canonical model ID to a LanguageModel instance wrapped with Axiom instrumentation.
  * Input format: "provider/model-name" (e.g. "google/gemini-3-flash")
  *
@@ -242,6 +278,10 @@ export function resolveModel(modelId: string, gatewayOverride?: AIGateway): Lang
 
   if (gatewayConfig === "opencodezen") {
     return wrapModel(getOpenCodeZenProvider()(resolveOpenCodeZenModelId(modelId)));
+  }
+
+  if (gatewayConfig === "cheaperinference") {
+    return wrapModel(getCheaperInferenceProvider()(resolveCheaperInferenceModelId(modelId)));
   }
 
   const [provider, ...rest] = modelId.split("/");
