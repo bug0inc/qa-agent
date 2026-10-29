@@ -34,6 +34,11 @@ describe("config", () => {
     expect(getConfig().ai?.gateway).toBe("opencodezen");
   });
 
+  it("configure sets ai.gateway to cheaperinference", () => {
+    configure({ ai: { gateway: "cheaperinference" } });
+    expect(getConfig().ai?.gateway).toBe("cheaperinference");
+  });
+
   it("configure merges without overwriting other keys", () => {
     configure({ uploadBasePath: "./uploads" });
     configure({ ai: { gateway: "none" } });

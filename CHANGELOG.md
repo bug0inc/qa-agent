@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Cheaper Inference gateway support**: set `gateway: "cheaperinference"` in `configure()` and provide `CHEAPERINFERENCE_API_KEY` to route all model requests through [Cheaper Inference](https://cheaperinference.com/docs) (`https://api.cheaperinference.com/v1`), an OpenAI-compatible LLM gateway.
 - **OpenCode Zen gateway support**: set `gateway: "opencodezen"` in `configure()` and provide `OPENCODEZEN_API_KEY` to route all model requests through [OpenCode Zen](https://opencode.ai/docs/ko/zen/) (`https://opencode.ai/zen/v1`), an OpenAI-compatible gateway with 30+ curated models including Claude, Gemini, GPT, Qwen, and more.
 - **OpenAI Support**: Direct integration with OpenAI models via `@ai-sdk/openai` and `OPENAI_API_KEY`
 - `maxRetries` option to `AssertionOptions` (default: `1`) to control how many times a failed assertion is retried with a fresh page snapshot and screenshot. Setting it to `0` disables retries.
